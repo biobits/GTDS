@@ -1,6 +1,7 @@
 --------------------------------------------------------
 --  DDL for Table TMP_SUBSTANZEN_HKR
 --------------------------------------------------------
+drop table  "OPS$TUMSYS"."TMP_SUBSTANZEN_HKR" ;
 
   CREATE TABLE "OPS$TUMSYS"."TMP_SUBSTANZEN_HKR" 
    (	"ATC_CODE" VARCHAR2(26 BYTE), 
@@ -8,11 +9,7 @@
 	"HANDELSNAME" VARCHAR2(256 BYTE), 
 	"ART" VARCHAR2(128 BYTE), 
 	"INDIKATION" VARCHAR2(256 BYTE)
-   ) SEGMENT CREATION IMMEDIATE 
-  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
-  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
-  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
-  TABLESPACE "GTDS" ;
+   ) ;
 
 SET DEFINE OFF
 
@@ -347,9 +344,6 @@ INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION
 VALUES ('L01XE05', 'Sorafenib', 'Nexavar', 'Z', 'Schilddrüse, Weichteilsarkome, GIST, HCC');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES ('L01AD04', 'Streptozocin', 'Zanosar', 'C', 'endokrine Pankreas, Neuroendokrine-GIT');
-
-INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L01XE04', 'Sunitinib', 'Sutent', 'Z', 'Schilddrüse, Weichteilsarkome, GIST, mNCC, pNET');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
@@ -417,9 +411,6 @@ VALUES ('L01CA04', 'Vinorelbin', 'Bendarelbin, Navelbine, Vinorelbin ebewe, Vino
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L01XX38', 'Vorinostat', 'Zolinza', 'C', 'kutanes T-Zell-Lymphom, Darm');
-
-INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES ('L01XX38', 'Vorinostat ', 'Zolinza', 'C', 'kutanen T-Zell-Lymphoms');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L01DB05', 'Zorubicin', NULL, 'C', 'Experimentelle Krebstherapie');
@@ -563,7 +554,7 @@ INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION
 VALUES ('L04AC03', 'Anakinra', 'Kineret', 'I', 'Experimentelle Krebstherapie');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES ('L04AA03', 'Antilymphozytäres Immunglobulin', 'ATG', 'I', 'GvHD-Prophylaxe/-Behandlung (Leukämien, Lymphome, MM)');
+VALUES ('L04AA03', 'Antilymphozyt. Immunglobulin', 'ATG', 'I', 'GvHD-Prophylaxe/-Behandlung (Leukämien, Lymphome, MM)');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L04AX01', 'Azathioprin', 'Imurek', 'I', 'Transplantatabstoßung ');
@@ -572,7 +563,7 @@ INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION
 VALUES ('L04AC02', 'Basiliximab', 'Simulect', 'I', 'Transplantatabstoßung ');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES ('L03AX03', 'BCG (Bacillus Calmette-Guérin) ', 'Tice', 'I', 'Harnblase');
+VALUES ('L03AX03', 'BCG (Bacill. Calmette-Guérin)', 'Tice', 'I', 'Harnblase');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L04AA28', 'Belatacept', 'Nulojix', 'I', 'Transplantatabstoßung ');
@@ -752,6 +743,9 @@ INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION
 VALUES ('L01XE25', 'Trametinib', NULL, 'I', 'mMelanom');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE38', 'Cobimetinib', NULL, 'I', 'Advanced melanoma with a BRAF V600E or V600K mutation');
+  	 
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('L01XC03', 'Trastuzumab', 'Herceptin, Emtansine, Kadcyla', 'I', 'Magen + AEG, Mamma');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
@@ -762,9 +756,6 @@ VALUES ('L04AD03', 'Voclosporin', 'Luveniq', 'I', 'Transplantatabstoßung ');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('M05BA04', 'Alendronsäure', 'Fosamax, Alendronsäure', 'S', 'Osteolysen');
-
-INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES (NULL, 'ASS', NULL, 'S', 'PV, ET, PM');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('M05BA02', 'Clodronsäure', 'Ostac, Bonefos, Sindronat', 'S', 'Osteolysen');
@@ -800,7 +791,7 @@ INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION
 VALUES ('L03AA10', 'Lenograstim', 'Granocyte', 'S', 'ALL, AML, Hodgkin');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
-VALUES ('B03XA03', 'Methoxy-Polyethylenglycol-Epoetin beta', 'Mircera', 'S', 'EPO, stimuliert die Bildung roter Blutkörperchen');
+VALUES ('B03XA03', 'Meth.-Polyethylengl.-Epoetin b', 'Mircera', 'S', 'EPO, stimuliert die Bildung roter Blutkörperchen');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('H02AB04', 'Methylprednisolon', 'Methyprednisolon sophar, Solu Medrol, Depo Medrol, Medrol, Methyprednisolon cortic, Methylprednisolon', 'S', 'Krebstherapie');
@@ -840,5 +831,38 @@ VALUES ('A04AA03', 'Tropisetron', 'Navoban', 'S', 'Antiemetikum (CINV)');
 
 INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
 VALUES ('M05BA08', 'Zoledronsäure', 'Zometa', 'S', 'Osteolysen');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01AD04', 'Streptozocin', 'Zanosar', 'C', 'Zytostatikum ; endokrine Pankreas, Neuroendokrine-GIT');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XX46', 'Olaparib', 'AZD-2281, Lynparza', 'Z', 'Ovar; Olaparib acts as an inhibitor of the enzyme poly ADP ribose polymerase (PARP), and is termed a PARP inhibitor');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE31', 'Nintedanib', 'Ofev, Vargatef', 'Z', 'Tyrosinkinase-Inhibitor; NSCLC');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XC19', 'Blinatumomab', ' Blincyto', 'I', 'Monoklonaler Antikörper; ALL ');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE35', 'Osimertinib', 'Tagrisso', 'Z', 'Tyrosinkinase-Inhibitor; NSCLC');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('S01AD02', 'Trifluridin', 'Tipiracil', 'C', 'Nukleosidanaloga ');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE28', 'Ceritinib', ' Zykadia', 'Z', 'Zytostatikum; NSCLC ');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE33', 'Palbociclib', 'Ibrance', 'Z', 'CDK-Inhibitor; ER+ MammaCa');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE13', 'Afatinib', 'Giotrif', 'Z', 'Tyrosinkinase-Inhibitor; NSCLC');
+
+INSERT INTO TMP_SUBSTANZEN_HKR (ATC_CODE, SUBSTANZ, HANDELSNAME, ART, INDIKATION) 
+VALUES ('L01XE36', 'Alectinib', ' Alecensa', 'Z', 'ALK-Inhibitor; NSCLC ');
+
+
+commit;
 
 -- Import Data into table TMP_SUBSTANZEN_HKR from file C:\Users\Administrator\Desktop\160926_Liste Barta_Chemo.xlsx . Task successful and sent to worksheet.
