@@ -1,6 +1,6 @@
 /*
 Prüfung auf Medikamente, die noch nicht genutzt werden
-select * from MEDIKAMENT M
+select * from MEDIKAMENT order by ABDA_NUMMER;
 where not exists (select * from PROTOKOLL_MEDIKAMENT P where P.FK_MEDIKAMENTMEDIK=M.ABDA_NUMMER)
 and not exists (select * from ZYKLUS_GESAMT_MEDI Z where Z.FK_MEDIKAMENTABDA=M.ABDA_NUMMER);
 
@@ -65,6 +65,7 @@ begin
    commit;
    end loop; 
 end;
+
 drop table TMP_MEDI_REORG ;
 
 --## Doppelte Substanz ENDE
@@ -197,6 +198,12 @@ select * from TMP_ZYKLUS_GESAMT_MEDI_BAK;
 truncate table PROTOKOLL_MEDIKAMENT;
 Insert into PROTOKOLL_MEDIKAMENT 
 select * from TMP_PROTOKOLL_MEDIKAMENT_BAK; 
-
+commit;
 
 */
+
+--## Abschließende Prüfung auf verwaiste EInträge
+select * from PROTOKOLL_MEDIKAMENT P where  exists (select * from MEDIKAMENT M where P.FK_MEDIKAMENTMEDIK=M.ABDA_NUMMER);
+
+select * from ZYKLUS_GESAMT_MEDI Z  where not  exists(select * from  MEDIKAMENT M where Z.FK_MEDIKAMENTABDA=M.ABDA_NUMMER);
+
