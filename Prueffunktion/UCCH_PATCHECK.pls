@@ -10,6 +10,7 @@
 -- 20170124: Syst. Therapie-> es muss entweder ein Protokoll od. Substanzen vorhanden sein (EInzeln werden Items nicht mehr abgefragt) / Sonderabfrage f. Weichteiltumore
 -- 20170125: Berücksichtigung der Diagnosen , bei denen keine Klassifikation erhoben wird im Parameter V_DiagOhneKlass
 -- 20170126: Berücksichtigung bei ED und OP am gleichen Tag: Klassifikationm dann nur bei OP; C44: keine Prüfung TNM
+-- 20170330: Mitgliedsnummer wird geprüft
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -34,6 +35,8 @@ V_GESCHLECHT varchar2(1) null;
 V_PATIENTEN_ID VARCHAR2(30) null; --UKE-ID
 V_STERBEDATUM date null;
 V_TUMORTOD	VARCHAR2(1) null; --Tod Tumorbedingt
+V_SV_NUMMER varchar2(20);
+V_MITGLIEDSNUMMER varchar2(30);
 --Variablen zur Prüfung
 V_COUNTER number null;
 V_COUNTER2 number null;
@@ -79,8 +82,13 @@ select  chr(13)||chr(10) into V_NL from DUAL;
 -- PATIENT
 ---------------------------------------------------------------------
 
-select p.GEBURTSDATUM,p.GESCHLECHT,p.PATIENTEN_ID,p.STERBEDATUM,p.TUMORTOD into V_GEBURTSDATUM,V_GESCHLECHT ,V_PATIENTEN_ID ,V_STERBEDATUM ,V_TUMORTOD
+select p.GEBURTSDATUM,p.GESCHLECHT,p.PATIENTEN_ID,p.SV_NUMMER,p.MITGLIEDSNUMMER,p.STERBEDATUM,p.TUMORTOD into V_GEBURTSDATUM,V_GESCHLECHT ,V_PATIENTEN_ID,V_SV_NUMMER,V_MITGLIEDSNUMMER ,V_STERBEDATUM ,V_TUMORTOD
   from PATIENT p where PAT_ID =PATID;
+--Versicherungsdaten
+if V_MITGLIEDSNUMMER like 'OK Update%' then 
+  select V_ERGEBNIS||'Mitgliedsnummer fehlerhaft;'||V_NL into V_ERGEBNIS from DUAL;
+end if;
+
 ---------------------------------------------------------------------
 -- DIAGNOSE
 ---------------------------------------------------------------------
