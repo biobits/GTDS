@@ -1,17 +1,8 @@
 --------------------------------------------------------------------------------------
--- Hauseigene Prüffunktion für Dokumentationen im GTDS.
--- Initial zur Prüfung von Items des GKR-Exportes
--- 20161219: Initiale Version
--- 20170103: Operationen und Innere Prüfung
--- 20170106: Bestrahlung/Verlauf und Abschluss
--- 20170116: Korrekturen nested Cursor
--- 20170120: Anpassung an Meldeanlässe
--- 20170123: Berücksichtigung Meldeanlass statusmeldung bei Verlauf/ pTNM Prüfung nur bei r_op.ZIEL_PRIMAERTUMOR in ('J','R') und OP keine Nachresektion
--- 20170124: Syst. Therapie-> es muss entweder ein Protokoll od. Substanzen vorhanden sein (EInzeln werden Items nicht mehr abgefragt) / Sonderabfrage f. Weichteiltumore
--- 20170125: Berücksichtigung der Diagnosen , bei denen keine Klassifikation erhoben wird im Parameter V_DiagOhneKlass
--- 20170126: Berücksichtigung bei ED und OP am gleichen Tag: Klassifikationm dann nur bei OP; C44: keine Prüfung TNM
--- 20170330: Mitgliedsnummer wird geprüft
--- 20170419: SV Nummer prüfung; Hausnummer Regex
+-- Hauseigene Prüffunktion für HKR-Exporte im GTDS.
+-- 
+-- 20170419: Initiale Version
+
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -23,182 +14,38 @@ CREATE OR REPLACE FUNCTION UCCH_PATCHECK
 (
   PATID IN NUMBER
 , TUMID IN VARCHAR2 
-, NUREIGENEDOKU IN NUMBER :=0 --1=Nur eigene Dokumentationen werden geprüft 
-, NURMELDEANLAESSE IN NUMBER :=0 -- 1=Nur Dokumente mit Meldeanlass =leer oder  Meldeanlass <> "Keine Meldung" werden geprüft
+, DATENART IN VARCHAR2  
+, LFDNR IN NUMBER 
+, EXPORTID in NUMBER
 ) RETURN VARCHAR2 AS 
 
 -- Variablen allg
 V_NL varchar2(2); --Newline für Windows
-
---VAriablen PAtient;
-V_GEBURTSDATUM date null;
-V_GESCHLECHT varchar2(1) null;
-V_PATIENTEN_ID VARCHAR2(30) null; --UKE-ID
-V_STERBEDATUM date null;
-V_TUMORTOD	VARCHAR2(1) null; --Tod Tumorbedingt
-V_SV_NUMMER varchar2(20);
-V_MITGLIEDSNUMMER varchar2(30);
-V_IKNR VARCHAR2(15)null;
-V_KK_TYP varchar2(1) null;
-V_STRASSE  varchar2(50) null;
-V_HAUSNUMMER varchar2(30) null;
---Variablen zur Prüfung
-V_COUNTER number null;
-V_COUNTER2 number null;
-V_COUNTER3 number null;
-V_COUNTER4 number null;
-V_COUNTER5 number null;
-V_WeichteilCounter number null; -- Sonderfall Weichteil tumor
-V_DiagOhneKlass number null; --COunter für jene Diagnosen, bei denen keine Klassifikation erhoben werden kann.
 V_ERGEBNIS varchar2(4000) null;
-
---Diagnose Parameter
-V_ICD varchar2(10) null; --ICD10
-V_DIAG_ABT number null; -- Durchfuehrende Abt. der Diagnose
-V_DIAG_DATUM date null; --DIagnosedatum
-V_DIAG_SICH varchar2(10) null;--DIagnosesicherung
-V_DIAG_LEISTUNG varchar2(4) null; --Leistungszustand
-V_DIAG_MELDEANLASS varchar(255) null ;--Meldeanlass
---KLassifikation
-V_pT varchar2(5)null;
-V_pN varchar2(5)null;
-V_pM varchar2(5)null;
-V_T varchar2(20)null;
-V_N varchar2(20)null;
-V_M varchar2(20)null;
-V_Sonst_Stadium varchar2(10) null;
-V_AnnArbor varchar2(10) null;
-V_C_SonstStad number null; --Counter f. Sonstige Stadien
-V_C_AnnArbor number null; --Counter AnnArbor Stadien
---OPERATION
---V_OPDATUM date null;
---V_OPINTENTION varchar2(1) null;
-V_OP_C_TNM number null; --Counter für TNM die mit einer OP assoziiert sind 
---Syst.-Therapie
-V_THER_C_SUB number null; --Counter für Substanzen die mit einer Int. Therapie assoziiert sind 
---Bestrahlung
-V_RT_C_ZIEL number null; --Counter für Zielgebiete die mit einer Bestrahlung assoziiert sind 
-V_RT_C_TEIL number null; --Counter für Teilbestrahlungen die mit einer Bestrahlung assoziiert sind 
+V_C_1 number null; --Counter für bedarfsfäll 
 
 BEGIN
 select '' into  V_ERGEBNIS from DUAL;
 select  chr(13)||chr(10) into V_NL from DUAL;
+
+
 ---------------------------------------------------------------------
--- PATIENT
+-- INTERNISTISCHE THERAPIE
 ---------------------------------------------------------------------
+if(DATENART='INTERNISTISCHE_THERAPIE') then
+  declare cursor c_it is select * from Internistische_THerapie
+     where FK_PATIENTPAT_ID =PATID and FK_TUMORTUMOR_ID=TUMID
+     and LFDNR=LFDNR;
 
-select p.GEBURTSDATUM,p.GESCHLECHT,p.PATIENTEN_ID,p.SV_NUMMER,p.MITGLIEDSNUMMER,p.STERBEDATUM,p.TUMORTOD,l.IKNR,l.KRANKENKASSEN_TYP,p.STRASSE,p.HAUSNUMMER
-into V_GEBURTSDATUM,V_GESCHLECHT ,V_PATIENTEN_ID,V_SV_NUMMER,V_MITGLIEDSNUMMER ,V_STERBEDATUM ,V_TUMORTOD,V_IKNR,V_KK_TYP,V_STRASSE,V_HAUSNUMMER
-  from PATIENT p left outer join LEISTUNGSTRAEGER l on p.FK_LEISTUNGSTRAEINS=l.INSTITUTIONSKENNZE
-  where PAT_ID =PATID;
--- Hausnummer prüfen, wenn nicht seperat eingetragen
-if(V_HAUSNUMMER is null) then
-  if (length(regexp_replace(V_STRASSE, '^(.+?)([-,0-9]+?)([-a-zA-Z ]*?|[-0-9 ]*?)$','\2\3')))>5 then
-    select V_ERGEBNIS||'Hausnummer evtl. fehlerhaft;'||V_NL into V_ERGEBNIS from DUAL;
-  end if;
-end if;
---Versicherungsdaten
-if V_MITGLIEDSNUMMER like 'OK Update%' then 
-  select V_ERGEBNIS||'Mitgliedsnummer fehlerhaft;'||V_NL into V_ERGEBNIS from DUAL;
-end if;
-
---IKNR des Leistungstraegers
-if (V_IKNR is null or V_IKNR like 'keine%') then
-  select V_ERGEBNIS||'IKNR des Leistungstragers fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-
---Fehlende SV-Nummer bei gesetzlicher KK  
-end if;
-if (V_SV_NUMMER is null) and (V_IKNR not in ('970000011','970001001','970100001','970000022','970000099') and V_KK_TYP!='P' )then
- select V_ERGEBNIS||'Versichertennummer fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-end if;
-
---SV Nummer zu lang
-/*if (length(V_SV_NUMMER)>10) then
-  select V_ERGEBNIS||'Versichertennummer zu lang;'||V_NL into V_ERGEBNIS from DUAL;
-end if;*/
-
---SV NUMMER nicht korrekt
-if (V_SV_NUMMER is not null and not REGEXP_LIKE(V_SV_NUMMER, '^[a-zA-Z]{1}[0-9]{9}$')) then
-  select V_ERGEBNIS||'Versichertennummer nicht korrekt;'||V_NL into V_ERGEBNIS from DUAL;
-end if;
----------------------------------------------------------------------
--- DIAGNOSE
----------------------------------------------------------------------
---ICD10 ermitteln
-select ICD10,DURCHFUEHRENDE_ABT_ID,DIAGNOSEDATUM,MELDEANLASS into V_ICD,V_DIAG_ABT,V_DIAG_DATUM,V_DIAG_MELDEANLASS from Tumor where FK_PATIENTPAT_ID=PATID and Tumor_id=TUMID;
-
-if V_ICD is null then
-  select V_ERGEBNIS||'ICD-10 Diagnose fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-end if;
-
-if V_DIAG_DATUM is null then
-  select V_ERGEBNIS||'Diagnosedatum fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-end if;
-
---nur EIgene Diagnose und gültige Meldeanlässe?
-if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_MELDEANLASS <>'keine_meldung' or NURMELDEANLAESSE=0))  then
-  -- SONDEFÄLLE --Bestimmte Parameter setzen für SOnderfälle
-  -------------------------------------------
-  -- DIagnose = Weichteiltumor?
-  select count(column_value) into V_WeichteilCounter from table(sys.dbms_debug_vc2coll('C38.1','C38.2','C38.3','C47%','C48.0','C49%')) where V_ICD like column_value;
-  -- Diagnosen ohne Klassifikationen
-  select count(column_value) into V_DiagOhneKlass from table(sys.dbms_debug_vc2coll('D35%','C44%')) where V_ICD like column_value;
-  
-  
-  --KLASSIFIKATION
-  --SOnstige Klassifikation (hämatologisch, Hirntumor)
-  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86','C88%','C9%','C70%','C71%','C72%','C69%','D32%','D33%','D35%','D36%','D46%')) where V_ICD like column_value;
-  --FIGO Benötigt?
-  select count(column_value) into v_COUNTER2 from table(sys.dbms_debug_vc2coll('C53%','C56%','C57%')) where V_ICD like column_value;
-  -- Sonderfall DIagnose und OP am gleichen Tag und pTNM dann bei OP
-  if(V_DiagOhneKlass=0) then
-    select count(*) into V_DiagOhneKlass from TNM where TNM.ERSTELLT=V_DIAG_DATUM and TNM.HERKUNFT='O' and FK_TUMORFK_PATIENT=PATID and FK_TUMORTUMOR_ID=TUMID; 
-  end if;
-  -- Klassifikation prüfen
-  if(V_DiagOhneKlass=0) then
-      if (V_COUNTER2>0) then
-        -- FIGO abfragen
-      
-        select max(FK_STADIENEINTESTA) into V_Sonst_Stadium  from SONSTIGE_KLASSIFIK where FK_TUMORFK_PATIENT=PATID and to_number(FK_TUMORTUMOR_ID)=TUMID and HERKUNFT='D' and FK_STADIENEINTEFK in (18,23);
-        if (V_Sonst_Stadium is null) then 
-            select V_ERGEBNIS||'FIGO-Stadium bei Diagnose fehlt;'||V_NL into V_ERGEBNIS from DUAL;
+  begin
+    for r_it in c_it loop
+    select count(*) into V_C_1 from export_datensatz  where EXPORT_ID<EXPORTID and ZUORDNUNG_TYP=DATENART 
+      and ZUORDNUNG_ID1=PATID and ZUORDNUNG_ID2=LFDNR and 
+    if ((NUREIGENEDOKU =0 or r_op.DURCHFUEHRENDE_ABT_ID>1) and (NURMELDEANLAESSE=0 or r_op.MELDEANLASS is null or r_op.MELDEANLASS<>'keine_meldung')) then
+        -- OP ohne OP-Intention vorhanden?
+        if (r_op.INTENTION is null) then
+           select V_ERGEBNIS||'OP['||r_op.OP_NUMMER||']: OP-Intention fehlt;'||V_NL into V_ERGEBNIS from DUAL;
         end if;
-      elsif (V_COUNTER>0) then
-        -- Klassifikation xyz
-        select max(FK_STADIENEINTESTA) into V_Sonst_Stadium  from SONSTIGE_KLASSIFIK where FK_TUMORFK_PATIENT=PATID and FK_TUMORTUMOR_ID=to_number(TUMID) and HERKUNFT='D' ;
-        select max(STADIUM) into V_AnnArbor  from ANN_ARBOR where FK_TUMORFK_PATIENT=PATID and FK_TUMORTUMOR_ID=to_number(TUMID) and HERKUNFT='D' ;
-        if (V_Sonst_Stadium is null and V_AnnArbor is null) then 
-            select V_ERGEBNIS||'Klassifikation bei Diagnose fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-        end if;
-      else --TNM checken
-          select max(t1.T),max(t1.N),max(t1.Met) into V_T,V_N,V_M from TNM t1 where t1.FK_TUMORFK_PATIENT=PATID and t1.FK_TUMORTUMOR_ID=TUMID and t1.Herkunft='D';
-          if (V_T is null or V_N is null or V_M is null) then 
-            select V_ERGEBNIS||'TNM-Status bei Diagnose unvollständig;'||V_NL into V_ERGEBNIS from DUAL;
-          end if;
-       end if;
-       
-       --LEISTUNGSZUSTAND
-       select  ECOG into V_DIAG_LEISTUNG from LEISTUNGSZUSTAND le where le.HERKUNFT='D' and le.FK_PATIENTPAT_ID=PATID and le.FK_TUMORTUMOR_ID=TUMID;
-       if (V_DIAG_LEISTUNG is null) then
-          select V_ERGEBNIS||'Leistungszustand bei Diagnose fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-        end if;
-   end if;
-   
-end if;
-
----------------------------------------------------------------------
--- OP 
----------------------------------------------------------------------
-declare cursor c_operation is select * from OPERATION
-   where FK_TUMORFK_PATIENT =PATID and FK_TUMORTUMOR_ID=TUMID;
-
-begin
-  for r_op in c_operation loop
-  if ((NUREIGENEDOKU =0 or r_op.DURCHFUEHRENDE_ABT_ID>1) and (NURMELDEANLAESSE=0 or r_op.MELDEANLASS is null or r_op.MELDEANLASS<>'keine_meldung')) then
-      -- OP ohne OP-Intention vorhanden?
-      if (r_op.INTENTION is null) then
-         select V_ERGEBNIS||'OP['||r_op.OP_NUMMER||']: OP-Intention fehlt;'||V_NL into V_ERGEBNIS from DUAL;
-      end if;
       
       -- OP (kurativ/palliativ) Prüfung nur bei Rezisiv oder Primätrtumor-OP sowie nicht bei NAchresektionen
       if ((r_op.INTENTION ='K' or r_op.INTENTION='P') and r_op.ZIEL_PRIMAERTUMOR in ('J','R') and (r_op.NACHRESEKTION is null or r_op.NACHRESEKTION <>'J') ) then 
