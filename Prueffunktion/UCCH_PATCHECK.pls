@@ -147,7 +147,7 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
   
   --KLASSIFIKATION
   --SOnstige Klassifikation (hämatologisch, Hirntumor)
-  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86','C88%','C9%','C70%','C71%','C72%','C69%','D32%','D33%','D35%','D36%','D46%')) where V_ICD like column_value;
+  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86','C88%','C9%','C70%','C71%','C72%','C69%','D32%','D33%','D35%','D36%','D46%','C22.0')) where V_ICD like column_value;
   --FIGO Benötigt?
   select count(column_value) into v_COUNTER2 from table(sys.dbms_debug_vc2coll('C53%','C56%','C57%')) where V_ICD like column_value;
   -- Sonderfall DIagnose und OP am gleichen Tag und pTNM dann bei OP
