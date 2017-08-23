@@ -1,6 +1,6 @@
 
   SELECT
-       pa.vorname,pa.name,pa.geburtsdatum,pa.pat_id,pa.strasse,pa.plz,pa.Ort,aus.LETZTER_STATUS_DATUM,aus.LETZTER_STATUS_DATENART,
+       pa.pat_id,pa.vorname,pa.name,pa.geburtsdatum,pa.strasse,pa.plz,pa.Ort,aus.LETZTER_STATUS_DATUM,aus.LETZTER_STATUS_DATENART,
        aus.LETZTE_INFO_DATUM,aus.LETZTE_INFO_DATENART,aus.DIAGNOSEDATUM,aus.DIAGNOSETEXT,aus.ICD10,
         nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL,be.TITEL,
@@ -28,8 +28,8 @@
                   AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
                   AND qb.Fk_Vorhandene_DDAT = 'Diagnose'
                   and qb.FK_QUALITATIVE_ID = 1)--"Ja")
-  
+      and aus.KKR_EINWILLIGUNG<>'N'
         and aus.LETZTER_STATUS_DATUM<=trunc(to_date(:FollowUpStichtag))
- and (:FollowUpZaehljahrStart is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))<=:FollowUpZaehljahrStart)
-  and (:FollowUpZaehljahrEnd is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))>=:FollowUpZaehljahrEnd  )  
+ and (:FollowUpZaehljahrStart is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))>=:FollowUpZaehljahrStart)
+  and (:FollowUpZaehljahrEnd is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))<=:FollowUpZaehljahrEnd  )  
         order by pa.pat_id desc;
