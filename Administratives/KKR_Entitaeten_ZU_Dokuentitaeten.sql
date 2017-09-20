@@ -1,0 +1,14 @@
+select en.LIKE_KRITERIUM,SUBSTR(en.LIKE_KRITERIUM, 0, LENGTH(en.LIKE_KRITERIUM) - 1) icd,kl.TEXT255 as ENTITAET, do.TEXT30 Dokumentar
+from  AW_KLASSENBEDINGUNG en
+
+inner join AW_KLASSE kl
+on kl.KLASSIERUNG_ID=en.KLASSIERUNG_ID
+and kl.CODE=en.CODE
+left outer join "AW_Dokumentarsentitaeten_UKE" do
+--on do.LIKE_KRITERIUM like en.LIKE_KRITERIUM
+on SUBSTR(en.LIKE_KRITERIUM, 0, LENGTH(en.LIKE_KRITERIUM) - 1) like do.LIKE_KRITERIUM
+where 
+ en.KLASSIERUNG_ID=4
+and en.KLASSIERUNG_QUELLE='UKE'
+order by en.LIKE_KRITERIUM
+;

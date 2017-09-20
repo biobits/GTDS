@@ -1,15 +1,15 @@
-CREATE OR REPLACE PROCEDURE UKE_SP_GET_NACHFRAGE_DATA 
+CREATE OR REPLACE PROCEDURE UKE_SP_GET_NACHFRAGE_ZWEI_DATA 
 (
   P_FULLNAME_ARZT IN VARCHAR2 ,
-  P_STARTDATUM IN DATE DEFAULT NULL,
-  P_ENDDATUM IN DATE DEFAULT NULL,
+  P_EINNERUNGSTICHTAG IN DATE ,
+  P_STATUSID in NUMBER,
   P_NACHFRAGEDATEN IN OUT SYS_REFCURSOR
 ) AS 
 BEGIN
   open P_NACHFRAGEDATEN for
   select p.PATIENTEN_ID UKE_ID, V.FK_PATIENTPAT_ID GTDS_ID,p.GEBURTSDATUM,p.NAME,p.VORNAME
     ,V.TUMOR_ID,V.DATENART,V.LFDNR,V.DATUM DATUM_DOKUMENT,
-    qb.TAG_DER_MESSUNG,qb.BEMERKUNG,A.ABTEILUNG,A.KUERZEL,
+    qb.FK_QUALITATIVE_ID,qb.TAG_DER_MESSUNG,qb.BEMERKUNG,A.ABTEILUNG,A.KUERZEL,
     A.ANSPRECH_NAME,A.ANSPRECH_VORNAME , A.ANSPRECH_TITEL,A.ANSPRECH_GESCHLECHT
     ,t.DIAGNOSEDATUM,t.DIAGNOSETEXT,t.ICD10,	
     nvl(e.TEXT255,'Sonstige') Entitaet,V.BESCHREIBUNG
@@ -24,19 +24,12 @@ BEGIN
     and V.LFDNR=qb.FK_VORHANDENE_DLFD
     and V.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
     and qb.FK_QUALITATIVE_FK = 79--Qualitatives_MErkmal Aktenbeurteilung
-    and qb.FK_QUALITATIVE_ID =1 -- Qualitative_AUspraegung
+    and qb.FK_QUALITATIVE_ID =P_STATUSID -- Qualitative_AUspraegung
     left outer join ABTEILUNG A
     on A.ABTEILUNG_ID=V.FK_ABTEILUNG_ID
      left outer join TUmor t
     on t.TUMOR_ID=V.TUMOR_ID
     and t.FK_PATIENTPAT_ID=V.FK_PATIENTPAT_ID
-   /* left outer join Entitaet_Beschreibung b
-    on t.ICD10              LIKE b.Like_Kriterium || '%'
-       AND b.Schluesselart      = 'ICD'
-       AND b.Auflage            = '10'
-      left outer join Tumor_Entitaet e
-     on e.Quelle             = b.Fk_EntitaetQuelle
-       AND e.LfdNr              = b.Fk_EntitaetLfdNr*/
     left outer join AW_KLASSENBEDINGUNG b
       on t.ICD10 like b.LIKE_KRITERIUM
       and b.KLASSIERUNG_ID=4
@@ -50,8 +43,8 @@ BEGIN
     left outer join BENUTZER be
     on be.BENUTZER_ID=de.TEXT30
     where  (a.ANSPRECH_NAME ||', '||a.ANSPRECH_VORNAME=P_FULLNAME_ARZT or (NVL(P_FULLNAME_ARZT,'ZZZ')='ZZZ' and NVL(a.ANSPRECH_NAME,'ZZZ')='ZZZ'))
-    and ( (trunc(qb.TAG_DER_MESSUNG) between trunc(to_date(P_STARTDATUM)) and trunc(to_date(P_ENDDATUM))))
+    and  (trunc(qb.TAG_DER_MESSUNG) <= trunc(to_date(P_EINNERUNGSTICHTAG)))
 
     order by V.FK_PATIENTPAT_ID desc;
     
-END UKE_SP_GET_NACHFRAGE_DATA;
+END UKE_SP_GET_NACHFRAGE_ZWEI_DATA ;
