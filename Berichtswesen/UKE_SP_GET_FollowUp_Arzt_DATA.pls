@@ -15,7 +15,7 @@ BEGIN
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,
         nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL,
-      a.Name Arzt_Name, a.Vorname Arzt_Vorname, a.titel Arzt_Titel, a.Institution Arzt_Institution, a.Geschlecht Arzt_Geschlecht, a.Strasse Arzt_Strasse, a.PLZ Arzt_PLZ, a.Ort Arzt_Ort 
+      a.Name Arzt_Name, a.Vorname Arzt_Vorname, a.titel Arzt_Titel, a.Institution Arzt_Institution, a.Geschlecht Arzt_Geschlecht, a.Strasse Arzt_Strasse, a.PLZ Arzt_PLZ, a.Ort Arzt_Ort,a.ARZT_ID
       FROM AUSWERTUNG aus inner join Patient pa
        on pa.PAT_ID=aus.PAT_ID            
       left outer join "OPS$TUMSYS"."AW_Dokumentarsentitaeten_UKE" de

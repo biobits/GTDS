@@ -36,7 +36,8 @@ create or replace PROCEDURE UKE_SP_BERICHT_FOLLOWUP_ARZT
     P_Arzt_Geschlech            ARZT.Geschlecht%Type ,
     P_Arzt_Strasse              ARZT.Strasse%Type ,
     P_Arzt_PLZ                  ARZT.PLZ%Type ,
-    P_Arzt_Ort                   ARZT.Ort%Type  
+    P_Arzt_Ort                   ARZT.Ort%Type ,
+    P_Arzt_Id                   ARZT.ARZT_ID%Type
     );
     
     p_indiv r_indiv;
