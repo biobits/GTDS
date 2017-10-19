@@ -31,6 +31,7 @@ BEGIN
       and ap.NachfrageAdressat = 'J' 
       left outer join arzt a 
       on a.Arzt_ID  = ap.Fk_ArztArzt_ID
+      and a.AKTIV='A'
        where aus.sterbedatum is null
        and aus.VORGANG_ID=0
         AND NOT EXISTS (select * from vorhandene_daten ch where
