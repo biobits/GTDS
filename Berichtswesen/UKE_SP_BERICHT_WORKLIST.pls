@@ -1,7 +1,43 @@
--- alter session set nls_sort=binary;
--- 
----Arbeistliste
-select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
+create or replace PROCEDURE UKE_SP_WORKLIST
+(
+  P_FILTERCODE IN NUMBER,
+  P_STARTDATUM IN DATE,
+  P_ENDDATUM IN DATE,
+  P_DIAGNOSEJAHR IN Number, 
+  P_PRIMFALL in NUMBER,
+  P_RESULTSET IN OUT SYS_REFCURSOR
+) AS 
+   type r_indiv is record(
+   
+    P_PATIENTEN_ID              EXTERNER_PATIENT.PATIENTEN_ID%TYPE ,
+    P_PAT_ID                    EXTERNER_PATIENT.PAT_ID%TYPE,
+    P_GTDS_ID                   PATIENT.PAT_ID%TYPE ,
+    P_VORNAME                   EXTERNER_PATIENT.VORNAME%TYPE,
+    P_NAME                      EXTERNER_PATIENT.NAME%TYPE,
+    P_GEBURTSDATUM              EXTERNER_PATIENT.GEBURTSDATUM%TYPE ,
+    P_GESCHLECHT                EXTERNER_PATIENT.GESCHLECHT%TYPE,
+    P_IMPORTDATUM               EXTERNER_PATIENT.IMPORT_DATUM%TYPE,
+    P_AENDERUNGSDATUM           EXTERNER_PATIENT.AENDERUNGSDATUM%TYPE,
+    P_STAMMDATENCHECK           VARCHAR2(250),
+    P_LETZTE_BEARBEITUNG        DATE,
+    P_LINK_MISSING              BOOLEAN,
+    P_IM_GTDS                   BOOLEAN,
+    P_EXTERNE_DIAGNOSEN         VARCHAR2(500),
+    P_DIAGNOSEN                 VARCHAR2 (100),
+    P_ICD10                     TUMOR.ICD10%TYPE,
+    P_DIAGNOSEDATUM             DATE,
+    P_TAG_DER_MESSUNG           DATE,
+    P_ARBEITSLISTE_TUMOR        VARCHAR2(500),
+    P_KORREKTUR_DATUM          DATE,
+    P_PRIMFALL_KKR              VARCHAR2(25),
+    P_MAX_EXT_DATE              DATE);
+    --p_indiv r_indiv;
+    --p_intrec IN OUT SYS_REFCURSOR
+   
+BEGIN
+
+open P_RESULTSET for
+select distinct  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
 p.pat_id GTDS_ID,EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM,
 EXTERNER_PATIENT.NAME,EXTERNER_PATIENT.VORNAME,EXTERNER_PATIENT.GEBURTSDATUM,EXTERNER_PATIENT.GESCHLECHT,
 case when EXTERNER_PATIENT.NAME<>p.NAME and p.Name is not null then 'Nachname prüfen; ' else null end ||
@@ -50,7 +86,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
             AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' ) as PRIMFALL_KKR,
   
- (select max(Datum) from 
+(select max(Datum) from 
 (select ED.DATUM as Datum,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
   union all
   select EP.DATUM,EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
@@ -75,7 +111,7 @@ T.FK_PATIENTPAT_ID=EXTERNER_PATIENT.pat_id
         where T.ICD10 like b.Like_Kriterium
         and b.klassierung_id=5 
             and b.KLASSIERUNG_QUELLE='UKE'
-            and b.KLASSE_CODE=:FILTERCODE)/**/
+            and b.KLASSE_CODE=P_FILTERCODE)/**/
   left outer join QUALITATIVER_BEFUND qba --Arbeitslisteninfos   
 on T.FK_PATIENTPAT_ID=qba.FK_VORHANDENE_DFK
  and T.TUMOR_ID=qba.FK_VORHANDENE_DLFD
@@ -91,16 +127,15 @@ AND MONTHS_BETWEEN(SYSDATE, EXTERNER_PATIENT.Geburtsdatum)/12 >= 17.5
 and
 --Filterbedingung Änderungszeitraum
 ( 
-  EXTERNER_PATIENT.AENDERUNGSDATUM between :startdatum and :enddatum
-  or ( EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM between :startdatum and :enddatum)
-  
+  EXTERNER_PATIENT.AENDERUNGSDATUM between P_STARTDATUM and P_ENDDATUM
+  or EXTERNER_PATIENT.IMPORT_DATUM between P_STARTDATUM and P_ENDDATUM
   or exists
-    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' and ED.DATUM between :startdatum and :enddatum) --EIne Externe Diagnose im Zeitraum
+    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' and ED.DATUM between P_STARTDATUM and P_ENDDATUM) --EIne Externe Diagnose im Zeitraum
   or exists
-    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' and EP.DATUM between :startdatum and :enddatum) --EIne Externe Prozedur im Zeitraum
+    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' and EP.DATUM between P_STARTDATUM and P_ENDDATUM) --EIne Externe Prozedur im Zeitraum
   or exists
     (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' 
-      and IB.BEFUND_DATUM between :startdatum and :enddatum) --EIne EInwilligung für das KKR im Zeitraum
+      and IB.BEFUND_DATUM between P_STARTDATUM and P_ENDDATUM) --EIne EInwilligung für das KKR im Zeitraum
   
 )
 --Filterbedingung: Wenn letzte Bearbeitung kleiner ENdatum des Änderungszeitraumes oder Patient nicht im GTDS
@@ -115,11 +150,11 @@ and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum
   WHERE 
   b.klassierung_id=5 
   and b.KLASSIERUNG_QUELLE='UKE'
-  and b.KLASSE_CODE=:FILTERCODE
+  and b.KLASSE_CODE=P_FILTERCODE
   and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
   and qb.FK_VORHANDENE_DDAT='Diagnose'
   and qb.FK_QUALITATIVE_FK=19
-and (qb.TAG_DER_MESSUNG<:enddatum or qb.TAG_DER_MESSUNG is null)
+and (qb.TAG_DER_MESSUNG<P_ENDDATUM or qb.TAG_DER_MESSUNG is null)
 ) 
 
 or p.PAT_ID is null
@@ -133,7 +168,7 @@ or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) v
    on T.ICD10 like b.Like_Kriterium
    WHERE b.klassierung_id=5 
   and b.KLASSIERUNG_QUELLE='UKE'
-  and b.KLASSE_CODE=:FILTERCODE
+  and b.KLASSE_CODE=P_FILTERCODE
   and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
   and qb.FK_VORHANDENE_DDAT='Diagnose'
   and qb.FK_QUALITATIVE_FK=19
@@ -141,7 +176,7 @@ or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) v
 
 )
 ---Filterbedingung für Entität
-AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen 
+AND ( P_FILTERCODE=250 --Restefilter wird so ausgeschlossen 
       or
       EXISTS (
               SELECT 1 FROM EXTERNE_DIAGNOSE ED
@@ -151,7 +186,7 @@ AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen
                WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
               and b.klassierung_id=5 
               and b.KLASSIERUNG_QUELLE='UKE'
-              and b.KLASSE_CODE=:FILTERCODE )
+              and b.KLASSE_CODE=P_FILTERCODE )
      
       )
   
@@ -164,15 +199,15 @@ and (exists
           T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
           and T.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
             AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
-            and qb.FK_QUALITATIVE_ID=:primfall
+            and qb.FK_QUALITATIVE_ID=P_PRIMFALL
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' )
-  ) or nvl(:primfall,0)=0
+  ) or P_PRIMFALL=0
 )
-and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=0)
+and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = P_DIAGNOSEJAHR or P_DIAGNOSEJAHR=0)
 
 --Filterbedingung Rest
 and (
-  :FILTERCODE<>250
+  P_FILTERCODE<>250
  or (
       not EXISTS (
       SELECT 1 FROM EXTERNE_DIAGNOSE ED
@@ -188,8 +223,7 @@ and (
                       and p.PATIENTEN_ID=EXTERNER_PATIENT.PATIENTEN_ID
                       ) 
 )
-
---order by COALESCE(EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM) desc
---and p.PAT_ID is not null
---order by p.PAT_ID desc
+/**/
 ;
+
+END UKE_SP_WORKLIST;

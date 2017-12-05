@@ -1,0 +1,2 @@
+Diese Skripte aktualisieren Daten in externer Patient, die vormals möglicherweise aus der Liste der Krankenhauspatienten gelöscht wurden.
+Ist ein Patient mit seiner UKE ID schon im GTDS bekannt, der Eintrag in "Externer_PATient" aber nicht mit dem entsprechenden EIntrag via Feld "PAT_ID" verknüpftz, so wird dieses Feld mit den Daten aus Tabelle PAtient aktualisiert.

@@ -1,0 +1,7 @@
+Hallo 
+18.10.2017 
+04:30
+PATH=C:\ProgramData\Oracle\Java\javapath;E:\app\ucch-fwadmin\product\11.2.0\client_1\bin;E:\oraclexe\app\oracle\product\11.2.0\server\bin;;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\SupportUKE\;C:\SupportUKE\SysinternalsSuite\;C:\SupportUKE\Putty\;E:\gtds\gtds\ORANT\BIN;
+E:\app\ucch-fwadmin\product\11.2.0\client_1\BIN\sqlplus.exe
+E:\oraclexe\app\oracle\product\11.2.0\server\bin\sqlplus.exe
+E:\gtds\gtds\ORANT\BIN\SQLPLUS.EXE

@@ -1,7 +1,9 @@
 -- alter session set nls_sort=binary;
 -- 
----Arbeistliste
-select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
+---Arbeistliste --/*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */
+select --distinct 
+
+EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
 p.pat_id GTDS_ID,EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM,
 EXTERNER_PATIENT.NAME,EXTERNER_PATIENT.VORNAME,EXTERNER_PATIENT.GEBURTSDATUM,EXTERNER_PATIENT.GESCHLECHT,
 case when EXTERNER_PATIENT.NAME<>p.NAME and p.Name is not null then 'Nachname prüfen; ' else null end ||
@@ -33,11 +35,12 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
 	 where t.FK_PATIENTPAT_ID = P.Pat_ID 
   	) as Diagnosen,
 
-  T.ICD10 as Diagnose_Tumor,
+ /* T.ICD10 as Diagnose_Tumor,
   T.DIAGNOSEDATUM,
+ 
   qba.TAG_DER_MESSUNG as Letzte_Bearbeitung_Tumor,
   case when qba.BEMERKUNG is null then qaa.Auspraegung else qaa.Auspraegung ||' - '||qba.BEMERKUNG end Arbeitsliste_Tumor ,
-  T.KORREKTUR_DATUM,
+  T.KORREKTUR_DATUM, 
 
              (select case when max(qb.Fk_Qualitative_Fk) is null then 'kein Merkmal' 
     when max(qa.AUSPRAEGUNG) is null then 'N.D.' else max(qa.AUSPRAEGUNG) end
@@ -49,7 +52,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
           and T.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
             AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' ) as PRIMFALL_KKR,
-  
+  */
  (select max(Datum) from 
 (select ED.DATUM as Datum,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
   union all
@@ -68,14 +71,14 @@ left outer join
 patient  p 
 on p.pat_id=EXTERNER_PATIENT.pat_id
 or p.PATIENTEN_ID= EXTERNER_PATIENT.PATIENTEN_ID
-left outer join TUMOR T on 
+/*left outer join TUMOR T on 
 T.FK_PATIENTPAT_ID=EXTERNER_PATIENT.pat_id
   and exists(select 1 from 
     AW_KLASSEN_ALLE b
         where T.ICD10 like b.Like_Kriterium
         and b.klassierung_id=5 
             and b.KLASSIERUNG_QUELLE='UKE'
-            and b.KLASSE_CODE=:FILTERCODE)/**/
+            and b.KLASSE_CODE=:FILTERCODE)
   left outer join QUALITATIVER_BEFUND qba --Arbeitslisteninfos   
 on T.FK_PATIENTPAT_ID=qba.FK_VORHANDENE_DFK
  and T.TUMOR_ID=qba.FK_VORHANDENE_DLFD
@@ -83,7 +86,7 @@ and qba.FK_VORHANDENE_DDAT='Diagnose'
 and qba.FK_QUALITATIVE_FK=19
 left outer join QUALITATIVE_AUSPRAEGUNG qaa
   on qba.Fk_Qualitative_Fk = qaa.Fk_QualitativesID -- Merkmal
-            AND qba.Fk_Qualitative_ID = qaa.ID
+            AND qba.Fk_Qualitative_ID = qaa.ID*/
 where 
 EXTERNER_PATIENT.HAUPT_VERS_NAME='TUMORPATIENT'
 and EXTERNER_PATIENT.Import_Quelle = 'UKE'
@@ -157,7 +160,7 @@ AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen
   
 
 --FIlterbedingung Primärfall
-and (exists
+/*and (exists
   (
      (select 1 FROM QUALITATIVER_BEFUND qb 
           WHERE 
@@ -167,8 +170,9 @@ and (exists
             and qb.FK_QUALITATIVE_ID=:primfall
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' )
   ) or nvl(:primfall,0)=0
-)
-and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=0)
+)*/
+
+--and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=0)
 
 --Filterbedingung Rest
 and (
