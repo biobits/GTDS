@@ -151,7 +151,8 @@ AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen
                WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
               and b.klassierung_id=5 
               and b.KLASSIERUNG_QUELLE='UKE'
-              and b.KLASSE_CODE=:FILTERCODE )
+              and b.KLASSE_CODE=:FILTERCODE  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
+              ) --STATUS dient dem aussortieren unerwünschter / falscher Diagnosen
      
       )
   
