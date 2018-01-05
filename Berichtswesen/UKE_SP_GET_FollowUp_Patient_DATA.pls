@@ -15,17 +15,18 @@ BEGIN
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,
         nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL
-       FROM AUSWERTUNG aus inner join Patient pa
+
+FROM AUSWERTUNG aus inner join Patient pa
        on pa.PAT_ID=aus.PAT_ID            
-      left outer join "OPS$TUMSYS"."AW_Dokumentarsentitaeten_UKE" de
+left outer join "OPS$TUMSYS"."AW_Dokumentarsentitaeten_UKE" de
         on aus.ICD10 like de.LIKE_KRITERIUM
-      left outer join BENUTZER be
+left outer join BENUTZER be
         on be.BENUTZER_ID=de.TEXT30
-        left outer join AUSWERTUNG_KOLOREKT ak
+left outer join AUSWERTUNG_KOLOREKT ak
         on ak.PAt_ID=aus.PAt_Id
         and ak.Tumor_ID = aus.Tumor_id
         and ak.VORG_ID=0
-       where aus.sterbedatum is null
+where aus.sterbedatum is null
        and aus.VORGANG_ID=0
         AND NOT EXISTS (select * from vorhandene_daten ch where
              datenart = 'Abschluss' and
