@@ -1,12 +1,11 @@
 select distinct
 --Bericht
- b.PAT_ID,b.TUMOR_ID,b.DOKUMENTLFDNR,b.DATENART,b.DATUM as Anfrage_Datum,extract(YEAR from b.Datum) as Anfrage_Jahr,
+qb.FK_VORHANDENE_DFK as PAT_ID,v.TUMOR_ID,qb.FK_VORHANDENE_DLFD as  DOKUMENTLFDNR,qb.FK_VORHANDENE_DDAT as DATENART,b.DATUM as Anfrage_Datum,extract(YEAR from b.Datum) as Anfrage_Jahr,
 --(extract(YEAR from b.Datum)||'_'||extract(QUARTER from b.Datum) )as Anfrage_QuartalJahr,
 to_char(b.Datum,'YYYY_Q')as Anfrage_QuartalJahr,
 to_char(b.Datum,'YYYY_MM')as Anfrage_MonatJahr,
 extract(MONTH from b.Datum) as Anfrage_Monat
- 
- ,b.ART_DES_BRIEFES,
+,b.ART_DES_BRIEFES,
  --Anfrage
  qb.TAG_DER_MESSUNG ,qa.ID as Auspraegung_Id,qa.AUSPRAEGUNG,qa.BESCHREIBUNG,qb.BEMERKUNG,
  case when qa.ID =1 then 1 else 0 end as Anfrage_Offen,
@@ -43,4 +42,5 @@ on ab.ABTEILUNG_ID=v.FK_ABTEILUNG_ID
 
 where 
  qb.FK_QUALITATIVE_FK=79
-order by b.PAT_ID desc;
+-- order by b.DATUM desc;
+--order by qb.FK_VORHANDENE_DFK desc;

@@ -1,11 +1,13 @@
 CREATE OR REPLACE PROCEDURE UKE_SP_GET_NACHFRAGE_ZERT_DATA 
 (
   P_FULLNAME_ARZT IN VARCHAR2 ,
-  P_EINNERUNGSTICHTAG IN DATE ,
-  P_STATUSID in NUMBER,
+  P_ERSTANFRAGESTICHTAG IN DATE , -- für alle mit Status "offen" älter / gleich datum
+  P_VERSCHICKTSTICHTAG IN DATE , -- für alle mit Status 'VerschickT' älter /gleich Datum
+  P_ABSCHLUSSSTICHTAG IN DATE, ---- für alle mit Status 'Erinnerung' älter /gleich Datum, kann NULL sein, wenn daten nicht benötigt
   P_NACHFRAGEDATEN IN OUT SYS_REFCURSOR
 ) AS 
 BEGIN
+
   open P_NACHFRAGEDATEN for
   select p.PATIENTEN_ID UKE_ID, V.FK_PATIENTPAT_ID GTDS_ID,p.GEBURTSDATUM,p.NAME,p.VORNAME
     ,V.TUMOR_ID,V.DATENART,V.LFDNR,V.DATUM DATUM_DOKUMENT,
@@ -23,8 +25,6 @@ BEGIN
     on qb.FK_VORHANDENE_DDAT=V.DATENART
     and V.LFDNR=qb.FK_VORHANDENE_DLFD
     and V.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
-    and qb.FK_QUALITATIVE_FK = 79--Qualitatives_MErkmal Aktenbeurteilung
-    and qb.FK_QUALITATIVE_ID =P_STATUSID -- Qualitative_AUspraegung
     left outer join QUALITATIVE_AUSPRAEGUNG qa
     on qa.FK_QUALITATIVESID=qb.FK_QUALITATIVE_FK 
     and qa.ID=qb.FK_QUALITATIVE_ID
@@ -47,8 +47,22 @@ BEGIN
     left outer join BENUTZER be
     on be.BENUTZER_ID=de.TEXT30
     where  (a.ANSPRECH_NAME ||', '||a.ANSPRECH_VORNAME=P_FULLNAME_ARZT or (NVL(P_FULLNAME_ARZT,'ZZZ')='ZZZ' and NVL(a.ANSPRECH_NAME,'ZZZ')='ZZZ'))
-    and  (trunc(qb.TAG_DER_MESSUNG) <= trunc(to_date(P_EINNERUNGSTICHTAG)))
+    and qb.FK_QUALITATIVE_FK = 84--Qualitatives_MErkmal Anfrage Zertifizierung
+    and (
+          (qb.FK_QUALITATIVE_ID =1 -- Ausprägung "offen"
+              and  (trunc(qb.TAG_DER_MESSUNG) <= trunc(to_date(P_ERSTANFRAGESTICHTAG))))
+          or
+          (qb.FK_QUALITATIVE_ID =2 -- Ausprägung "verschickt"
+              and  (trunc(qb.TAG_DER_MESSUNG) <= trunc(to_date(P_VERSCHICKTSTICHTAG))))
+          or
+          (
+            --NVL2(P_ABSCHLUSSSTICHTAG,1,0)=0 or --funktioniert irgendwie nicht -fck ora
+            (qb.FK_QUALITATIVE_ID =4 -- Ausprägung "Erinnerung"
+              and  (trunc(qb.TAG_DER_MESSUNG) <= trunc(to_date(P_ABSCHLUSSSTICHTAG))))
+          )
+        )
 
-    order by V.FK_PATIENTPAT_ID desc;
+  --  order by V.FK_PATIENTPAT_ID desc
+  ;
     
 END UKE_SP_GET_NACHFRAGE_ZERT_DATA  ;

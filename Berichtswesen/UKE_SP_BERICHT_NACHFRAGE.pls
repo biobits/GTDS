@@ -60,7 +60,9 @@ if (P_IS_TEST=0) then
         
         --Erstellung des Berichst in Tabelle BERICHT loggen
         UKE_SP_INSERT_BERICHT(p_indiv.P_GTDS_ID, p_indiv.P_TUMOR_ID,P_BERICHTSNAME,p_indiv.P_DATENART,p_indiv.P_LFDNR,P_BENUTZER,'UKE');   
-        
+        -- Erstellung des Berichts in Tabelle UKE_EVENT_LOG loggen
+          UKE_SP_INSERT_EVENT(p_indiv.P_GTDS_ID,p_indiv.P_TUMOR_ID,p_indiv.P_DATENART,p_indiv.P_LFDNR,SYSDATE,'BERICHTE',
+                              'UKE_'||P_BERICHTSNAME,'erstellt',NULL,'Startdatum: ' ||P_STARTDATUM||'|'|| 'Enddatum: ' ||P_ENDDATUM,P_BENUTZER);
         --Update Qualitativer Befund Merkmal "ANfrage" auf Status "Verschickt" setzen
         update QUALITATIVER_BEFUND
         set FK_QUALITATIVE_ID=2,TAG_DER_MESSUNG=SYSDATE,FK_BENUTZERBENUTZE=P_BENUTZER
@@ -68,7 +70,10 @@ if (P_IS_TEST=0) then
         FK_VORHANDENE_DLFD=p_indiv.P_LFDNR and
         FK_VORHANDENE_DDAT=p_indiv.P_DATENART
         and FK_QUALITATIVE_FK=79;
-        
+        -- Logging der Merkmalsänderung in Event-Tabelle
+      UKE_SP_INSERT_EVENT(p_indiv.P_GTDS_ID,p_indiv.P_TUMOR_ID,p_indiv.P_DATENART,p_indiv.P_LFDNR,SYSDATE,'MERKMAL',
+                              'Anfrage','update','verschickt',p_indiv.P_ANSPRECH_NAME||', '||p_indiv.P_ANSPRECH_VORNAME||'|'||p_indiv.P_KUERZEL||'|'||
+                               'Startdatum: ' ||P_STARTDATUM||'|'|| 'Enddatum: ' ||P_ENDDATUM ,P_BENUTZER);
        -- p_num:=1;
     END LOOP;
     commit;

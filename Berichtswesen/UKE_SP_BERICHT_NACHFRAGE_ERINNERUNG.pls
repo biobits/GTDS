@@ -63,7 +63,9 @@ if (P_IS_TEST=0) then
         
         --Erstellung des Berichst in Tabelle BERICHT loggen
         UKE_SP_INSERT_BERICHT(p_indiv.P_GTDS_ID, p_indiv.P_TUMOR_ID,P_BERICHTSNAME,p_indiv.P_DATENART,p_indiv.P_LFDNR,P_BENUTZER,'UKE');   
-        
+        -- Erstellung des Berichts in Tabelle UKE_EVENT_LOG loggen
+          UKE_SP_INSERT_EVENT(p_indiv.P_GTDS_ID,p_indiv.P_TUMOR_ID,p_indiv.P_DATENART,p_indiv.P_LFDNR,SYSDATE,'BERICHTE',
+                              'UKE_'||P_BERICHTSNAME,'erstellt',NULL,'Erinnerung: ' ||P_EINNERUNGSTICHTAG||'|'|| 'Abschluss: ' ||P_ABSCHLUSSSTICHTAG,P_BENUTZER);
         --Update Qualitativer Befund Merkmal "ANfrage" auf Status "Erinnerung" setzen
         update QUALITATIVER_BEFUND
         set FK_QUALITATIVE_ID=4,TAG_DER_MESSUNG=SYSDATE,FK_BENUTZERBENUTZE=P_BENUTZER
@@ -71,7 +73,10 @@ if (P_IS_TEST=0) then
         FK_VORHANDENE_DLFD=p_indiv.P_LFDNR and
         FK_VORHANDENE_DDAT=p_indiv.P_DATENART
         and FK_QUALITATIVE_FK=79;
-        
+        -- Logging der Merkmalsänderung in Event-Tabelle
+      UKE_SP_INSERT_EVENT(p_indiv.P_GTDS_ID,p_indiv.P_TUMOR_ID,p_indiv.P_DATENART,p_indiv.P_LFDNR,SYSDATE,'MERKMAL',
+                              'Anfrage','update','Erinnerung',p_indiv.P_ANSPRECH_NAME||', '||p_indiv.P_ANSPRECH_VORNAME||'|'||p_indiv.P_KUERZEL||'|'||
+                               'Erinnerung: ' ||P_EINNERUNGSTICHTAG,P_BENUTZER);
        -- p_num:=1;
     END LOOP;
     
@@ -91,7 +96,10 @@ if (P_IS_TEST=0) then
         FK_VORHANDENE_DLFD=p_indiv2.P_LFDNR and
         FK_VORHANDENE_DDAT=p_indiv2.P_DATENART
         and FK_QUALITATIVE_FK=79;
-        
+        -- Logging der Merkmalsänderung in Event-Tabelle
+      UKE_SP_INSERT_EVENT(p_indiv2.P_GTDS_ID,p_indiv2.P_TUMOR_ID,p_indiv2.P_DATENART,p_indiv2.P_LFDNR,SYSDATE,'MERKMAL',
+                              'Anfrage','update','unvollständig erledigt',p_indiv2.P_ANSPRECH_NAME||', '||p_indiv2.P_ANSPRECH_VORNAME||'|'||p_indiv2.P_KUERZEL||'|'||
+                               'Abschluss: ' ||P_ABSCHLUSSSTICHTAG,P_BENUTZER);
        -- p_num:=1;
     END LOOP;
     commit;
