@@ -55,7 +55,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
   union all
   select EP.DATUM,EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
   union all
-  select IB.BEFUND_DATUM,IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB 
+  select IB.BEFUND_DATUM,IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
   union all
   select apb.BEGINN,FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb ) XT
   where XT.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XT.IMPORT_QUELLE='UKE'
@@ -104,7 +104,7 @@ and
   
 )
 --Filterbedingung: Wenn letzte Bearbeitung kleiner ENdatum des Änderungszeitraumes oder Patient nicht im GTDS
-and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum
+and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum und kleiner "Arbeitslistendatum"
 (select 1 from 
   QUALITATIVER_BEFUND qb  inner join Tumor T
   on T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
@@ -119,7 +119,7 @@ and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum
   and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
   and qb.FK_VORHANDENE_DDAT='Diagnose'
   and qb.FK_QUALITATIVE_FK=19
-and (qb.TAG_DER_MESSUNG<:enddatum or qb.TAG_DER_MESSUNG is null)
+and ((qb.TAG_DER_MESSUNG<:enddatum and qb.TAG_DER_MESSUNG<:bearbeitungsdatum) or qb.TAG_DER_MESSUNG is null)
 ) 
 
 or p.PAT_ID is null
@@ -142,6 +142,8 @@ or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) v
 )
 ---Filterbedingung für Entität
 AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen 
+      or
+      :FILTERCODE=150 --Metastasenfilter wird so ausgeschlossen 
       or
       EXISTS (
               SELECT 1 FROM EXTERNE_DIAGNOSE ED
@@ -175,7 +177,7 @@ and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=
 and (
   :FILTERCODE<>250
  or (
-      not EXISTS (
+      not EXISTS ( -- Alle ICD Codes der anderen Filter ausser der Generelle "Alles"-Filter (240) werden ausgeschlossen
       SELECT 1 FROM EXTERNE_DIAGNOSE ED
       inner join 
        AW_KLASSEN_ALLE b
@@ -184,13 +186,114 @@ and (
       and b.klassierung_id=5 
       and b.KLASSIERUNG_QUELLE='UKE'
       and (b.KLASSE_CODE<>240 --Code für alle C und D-Diagnosen
-          or b.KLASSE_CODE<>250) --Code für SST-Rest
+          and b.KLASSE_CODE<>250) --Code für SST-Rest
                       )
-                      and p.PATIENTEN_ID=EXTERNER_PATIENT.PATIENTEN_ID
-                      ) 
+       --               and p.PATIENTEN_ID=EXTERNER_PATIENT.PATIENTEN_ID
+      /*and EXISTS (  -- Verbleibende ICD-Cdes werden über den "Alle"-Filter eingeschlossen
+              SELECT 1 FROM EXTERNE_DIAGNOSE ED
+              inner join 
+               AW_KLASSEN_ALLE b
+               on ED.FK_ICDICD like b.Like_Kriterium
+               WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+              and b.klassierung_id=5 
+              and b.KLASSIERUNG_QUELLE='UKE'
+              and b.KLASSE_CODE=240  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
+              )*/
+        )
+)
+
+--Filterbedingung Metastasen
+and (
+  :FILTERCODE<>140
+ or (
+      not EXISTS ( --- Alle ICD Codes der anderen Filter aus der Generelle "Alles"-Filter (240) werden ausgeschlossen
+      SELECT 1 FROM EXTERNE_DIAGNOSE ED
+      inner join 
+       AW_KLASSEN_ALLE b
+       on ED.FK_ICDICD like b.Like_Kriterium
+       WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+      and b.klassierung_id=5 
+      and b.KLASSIERUNG_QUELLE='UKE'
+      and (b.KLASSE_CODE<>240 --Code für alle C und D-Diagnosen
+          and b.KLASSE_CODE<>250 and b.KLASSE_CODE <>:FILTERCODE) --Code für SST-Rest
+                      )
+                   --   and p.PATIENTEN_ID=EXTERNER_PATIENT.PATIENTEN_ID
+                      
+      and EXISTS (  -- Alle Metastasencodes werden eingeschlossen
+              SELECT 1 FROM EXTERNE_DIAGNOSE ED
+              inner join 
+               AW_KLASSEN_ALLE b
+               on ED.FK_ICDICD like b.Like_Kriterium
+               WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+              and b.klassierung_id=5 
+              and b.KLASSIERUNG_QUELLE='UKE'
+              and b.KLASSE_CODE=:FILTERCODE  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
+              )
+      )
 )
 
 --order by COALESCE(EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM) desc
 --and p.PAT_ID is not null
 --order by p.PAT_ID desc
 ;
+
+/* BEDINGUNG RESTEFILTER AUS ALTER ABFRAGE
+exists (
+SELECT Fk_Externe_Patienten_ID
+ FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+ WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+ AND ABP1.Fk_AbteilungAbteil  IN ('12973','8975','8977','8982','21602','21626')
+)or exists (select p.Pat_ID from Patient p where p.Patienten_ID=EXTERNER_PATIENT.Patienten_ID))
+
+AND NOT EXISTS (
+	SELECT * FROM EXTERNE_DIAGNOSE ED
+	WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+
+	AND 	( 
+		ED.Fk_IcdIcd LIKE 'C0%' OR
+		ED.Fk_IcdIcd LIKE 'C1%' OR
+		ED.Fk_IcdIcd LIKE 'C2%' OR
+		ED.Fk_IcdIcd LIKE 'C3%' OR
+		ED.Fk_IcdIcd LIKE 'C4%' OR
+		ED.Fk_IcdIcd LIKE 'C5%' OR
+		ED.Fk_IcdIcd LIKE 'C6%' OR
+		ED.Fk_IcdIcd LIKE 'C70%' OR
+		ED.Fk_IcdIcd LIKE 'C71%' OR
+		ED.Fk_IcdIcd LIKE 'C72%' OR
+		ED.Fk_IcdIcd LIKE 'C73%' OR
+		ED.Fk_IcdIcd LIKE 'C74%' OR
+		ED.Fk_IcdIcd LIKE 'C75%' OR
+		ED.Fk_IcdIcd LIKE 'C8%' OR
+		ED.Fk_IcdIcd LIKE 'C90%' OR
+		ED.Fk_IcdIcd LIKE 'C91%' OR
+		ED.Fk_IcdIcd LIKE 'C92%' OR
+		ED.Fk_IcdIcd LIKE 'C93%' OR
+		ED.Fk_IcdIcd LIKE 'C94%' OR
+		ED.Fk_IcdIcd LIKE 'C95%' OR
+		ED.Fk_IcdIcd LIKE 'C96%' OR
+		ED.Fk_IcdIcd LIKE 'D00%' OR
+		ED.Fk_IcdIcd LIKE 'D01%' OR
+		ED.Fk_IcdIcd LIKE 'D02%' OR
+		ED.Fk_IcdIcd LIKE 'D03%' OR
+		ED.Fk_IcdIcd LIKE 'D04%' OR
+		ED.Fk_IcdIcd LIKE 'D05%' OR
+		ED.Fk_IcdIcd LIKE 'D06%' OR
+		ED.Fk_IcdIcd LIKE 'D07%' OR
+		ED.Fk_IcdIcd LIKE 'D09.0%' OR
+		ED.Fk_IcdIcd LIKE 'D09.1%' OR
+		ED.Fk_IcdIcd LIKE 'D09.2%' OR
+		ED.Fk_IcdIcd LIKE 'D09.3%' OR
+		ED.Fk_IcdIcd LIKE 'D32%' OR
+		ED.Fk_IcdIcd LIKE 'D33%' OR
+                ED.Fk_IcdIcd LIKE 'D35.2%' OR
+                ED.Fk_IcdIcd LIKE 'D35.3%' OR
+                ED.Fk_IcdIcd LIKE 'D35.4%' OR
+		ED.Fk_IcdIcd LIKE 'D42%' OR
+		ED.Fk_IcdIcd LIKE 'D43%' OR
+		ED.Fk_IcdIcd LIKE 'D44%' OR
+		ED.Fk_IcdIcd LIKE 'D45%' OR
+		ED.Fk_IcdIcd LIKE 'D46%' OR
+		ED.Fk_IcdIcd LIKE 'D47%' 
+		)
+            )
+*/
