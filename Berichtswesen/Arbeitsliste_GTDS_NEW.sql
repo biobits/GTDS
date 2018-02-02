@@ -91,20 +91,29 @@ AND MONTHS_BETWEEN(SYSDATE, EXTERNER_PATIENT.Geburtsdatum)/12 >= 17.5
 and
 --Filterbedingung Änderungszeitraum
 ( 
-  EXTERNER_PATIENT.AENDERUNGSDATUM between :startdatum and :enddatum
-  or ( EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM between :startdatum and :enddatum)
   
+
+  
+ ( 
+  (
+    ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.AENDERUNGSDATUM)-- and EXTERNER_PATIENT.AENDERUNGSDATUM between :startdatum and :enddatum
+      )
+  or ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.IMPORT_DATUM)-- and  EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM between :startdatum and :enddatum
+      )
+  )
   or exists
-    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' and ED.DATUM between :startdatum and :enddatum) --EIne Externe Diagnose im Zeitraum
+    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' --and ED.DATUM between :startdatum and :enddatum
+     and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<ED.DATUM) ) --EIne Externe Diagnose im Zeitraum
   or exists
-    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' and EP.DATUM between :startdatum and :enddatum) --EIne Externe Prozedur im Zeitraum
+    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' --and EP.DATUM between :startdatum and :enddatum
+      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EP.DATUM)) --EIne Externe Prozedur im Zeitraum
   or exists
-    (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' 
-      and IB.BEFUND_DATUM between :startdatum and :enddatum) --EIne EInwilligung für das KKR im Zeitraum
+    (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' --and IB.BEFUND_DATUM between :startdatum and :enddatum 
+      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<IB.BEFUND_DATUM)) --EIne EInwilligung für das KKR im Zeitraum
   
 )
 --Filterbedingung: Wenn letzte Bearbeitung kleiner ENdatum des Änderungszeitraumes oder Patient nicht im GTDS
-and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum und kleiner "Arbeitslistendatum"
+/*and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum und kleiner "Arbeitslistendatum"
 (select 1 from 
   QUALITATIVER_BEFUND qb  inner join Tumor T
   on T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
@@ -122,7 +131,7 @@ and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum und kleiner "Ar
 and ((qb.TAG_DER_MESSUNG<:enddatum and qb.TAG_DER_MESSUNG<:bearbeitungsdatum) or qb.TAG_DER_MESSUNG is null)
 ) 
 
-or p.PAT_ID is null
+
 or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) vorhanden
   select 1 from 
   QUALITATIVER_BEFUND qb  inner join Tumor T
@@ -137,8 +146,8 @@ or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) v
   and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
   and qb.FK_VORHANDENE_DDAT='Diagnose'
   and qb.FK_QUALITATIVE_FK=19
-  )
-
+  )*/
+or p.PAT_ID is null
 )
 ---Filterbedingung für Entität
 AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen 
@@ -243,68 +252,5 @@ and (
       )
 )
 
---order by COALESCE(EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM) desc
---and p.PAT_ID is not null
---order by p.PAT_ID desc
+
 ;
-
-/* BEDINGUNG RESTEFILTER AUS ALTER ABFRAGE
-exists (
-SELECT Fk_Externe_Patienten_ID
- FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
- WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
- AND ABP1.Fk_AbteilungAbteil  IN ('12973','8975','8977','8982','21602','21626')
-)or exists (select p.Pat_ID from Patient p where p.Patienten_ID=EXTERNER_PATIENT.Patienten_ID))
-
-AND NOT EXISTS (
-	SELECT * FROM EXTERNE_DIAGNOSE ED
-	WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
-
-	AND 	( 
-		ED.Fk_IcdIcd LIKE 'C0%' OR
-		ED.Fk_IcdIcd LIKE 'C1%' OR
-		ED.Fk_IcdIcd LIKE 'C2%' OR
-		ED.Fk_IcdIcd LIKE 'C3%' OR
-		ED.Fk_IcdIcd LIKE 'C4%' OR
-		ED.Fk_IcdIcd LIKE 'C5%' OR
-		ED.Fk_IcdIcd LIKE 'C6%' OR
-		ED.Fk_IcdIcd LIKE 'C70%' OR
-		ED.Fk_IcdIcd LIKE 'C71%' OR
-		ED.Fk_IcdIcd LIKE 'C72%' OR
-		ED.Fk_IcdIcd LIKE 'C73%' OR
-		ED.Fk_IcdIcd LIKE 'C74%' OR
-		ED.Fk_IcdIcd LIKE 'C75%' OR
-		ED.Fk_IcdIcd LIKE 'C8%' OR
-		ED.Fk_IcdIcd LIKE 'C90%' OR
-		ED.Fk_IcdIcd LIKE 'C91%' OR
-		ED.Fk_IcdIcd LIKE 'C92%' OR
-		ED.Fk_IcdIcd LIKE 'C93%' OR
-		ED.Fk_IcdIcd LIKE 'C94%' OR
-		ED.Fk_IcdIcd LIKE 'C95%' OR
-		ED.Fk_IcdIcd LIKE 'C96%' OR
-		ED.Fk_IcdIcd LIKE 'D00%' OR
-		ED.Fk_IcdIcd LIKE 'D01%' OR
-		ED.Fk_IcdIcd LIKE 'D02%' OR
-		ED.Fk_IcdIcd LIKE 'D03%' OR
-		ED.Fk_IcdIcd LIKE 'D04%' OR
-		ED.Fk_IcdIcd LIKE 'D05%' OR
-		ED.Fk_IcdIcd LIKE 'D06%' OR
-		ED.Fk_IcdIcd LIKE 'D07%' OR
-		ED.Fk_IcdIcd LIKE 'D09.0%' OR
-		ED.Fk_IcdIcd LIKE 'D09.1%' OR
-		ED.Fk_IcdIcd LIKE 'D09.2%' OR
-		ED.Fk_IcdIcd LIKE 'D09.3%' OR
-		ED.Fk_IcdIcd LIKE 'D32%' OR
-		ED.Fk_IcdIcd LIKE 'D33%' OR
-                ED.Fk_IcdIcd LIKE 'D35.2%' OR
-                ED.Fk_IcdIcd LIKE 'D35.3%' OR
-                ED.Fk_IcdIcd LIKE 'D35.4%' OR
-		ED.Fk_IcdIcd LIKE 'D42%' OR
-		ED.Fk_IcdIcd LIKE 'D43%' OR
-		ED.Fk_IcdIcd LIKE 'D44%' OR
-		ED.Fk_IcdIcd LIKE 'D45%' OR
-		ED.Fk_IcdIcd LIKE 'D46%' OR
-		ED.Fk_IcdIcd LIKE 'D47%' 
-		)
-            )
-*/

@@ -9,13 +9,17 @@ CREATE OR REPLACE PROCEDURE UKE_SP_GET_FU_ARZT_DATA
 BEGIN
   open P_FU_DATEN for
  select distinct pa.pat_id,pa.vorname,pa.name,pa.geburtsdatum,pa.geschlecht
-  ,pa.strasse,pa.plz,pa.Ort,
+  ,pa.strasse,pa.plz,pa.Ort,pa.VORWAHL Patient_Vorwahl,pa.TELEFON as Patient_Telefon,
      aus.LETZTER_STATUS_DATUM,
      aus.LETZTER_STATUS_DATENART,
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,
         nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL,
-      a.Name Arzt_Name, a.Vorname Arzt_Vorname, a.titel Arzt_Titel, a.Institution Arzt_Institution, a.Geschlecht Arzt_Geschlecht, a.Strasse Arzt_Strasse, a.PLZ Arzt_PLZ, a.Ort Arzt_Ort,a.ARZT_ID
+      a.Name Arzt_Name, a.Vorname Arzt_Vorname, a.titel Arzt_Titel, a.Institution Arzt_Institution, a.Geschlecht Arzt_Geschlecht
+      , a.Strasse Arzt_Strasse, a.PLZ Arzt_PLZ, a.Ort Arzt_Ort,a.ARZT_ID
+      ,a.VORWAHL Arzt_Vorwahl,a.TELEFON Arzt_Telefon
+      ,ap.BERICHTSBEGINN,ap.BERICHTSENDE,ap.HAUSARZT
+      ,qb.BEMERKUNG as Follow_Up_Info,qb.TAG_DER_MESSUNG as Info_Datum
       FROM AUSWERTUNG aus inner join Patient pa
        on pa.PAT_ID=aus.PAT_ID            
       left outer join "OPS$TUMSYS"."AW_Dokumentarsentitaeten_UKE" de
@@ -32,6 +36,11 @@ BEGIN
       left outer join arzt a 
       on a.Arzt_ID  = ap.Fk_ArztArzt_ID
       and a.AKTIV='A'
+      left outer join QUALITATIVER_BEFUND qb 
+      on qb.FK_VORHANDENE_DDAT='Diagnose'
+      and qb.FK_VORHANDENE_DFK=pa.PAT_ID
+      and qb.FK_VORHANDENE_DLFD=aus.TUMOR_ID
+      and qb.FK_QUALITATIVE_FK=80-- Follow-Up Info
        where aus.sterbedatum is null
        and aus.VORGANG_ID=0
         AND NOT EXISTS (select * from vorhandene_daten ch where

@@ -18,6 +18,8 @@ create or replace PROCEDURE UKE_SP_BERICHT_FOLLOWUP_ARZT
     P_STRASSE                   PATIENT.STRASSE%TYPE,
     P_PLZ                       PATIENT.PLZ%TYPE,
     P_ORT                       PATIENT.ORT%TYPE,
+    P_Patient_Vorwahl           PATIENT.VORWAHL%TYPE,
+    P_Patient_Telefon           PATIENT.TELEFON%TYPE,
     P_LETZTER_STATUS_DATUM      AUSWERTUNG.LETZTER_STATUS_DATUM%TYPE,
     P_LETZTER_STATUS_DATENART   AUSWERTUNG.LETZTER_STATUS_DATENART%TYPE,
     P_TUMOR_ID                  AUSWERTUNG.TUMOR_ID%TYPE,
@@ -36,8 +38,15 @@ create or replace PROCEDURE UKE_SP_BERICHT_FOLLOWUP_ARZT
     P_Arzt_Geschlech            ARZT.Geschlecht%Type ,
     P_Arzt_Strasse              ARZT.Strasse%Type ,
     P_Arzt_PLZ                  ARZT.PLZ%Type ,
-    P_Arzt_Ort                   ARZT.Ort%Type ,
-    P_Arzt_Id                   ARZT.ARZT_ID%Type
+    P_Arzt_Ort                  ARZT.Ort%Type ,
+    P_Arzt_Id                   ARZT.ARZT_ID%Type,
+    P_Arzt_Vorwahl              ARZT.VORWAHL%TYPE,
+    P_Arzt_Telefon              ARZT.TELEFON%TYpe,
+    P_BERICHTSBEGINN            ARZT_PATIENT_BEZIEHUNG.BERICHTSBEGINN%TYPE,
+    P_BERICHTSENDE              ARZT_PATIENT_BEZIEHUNG.BERICHTSENDE%TYPE,
+    P_HAUSARZT                  ARZT_PATIENT_BEZIEHUNG.HAUSARZT%TYPE,
+    P_Follow_Up_Info            QUALITATIVER_BEFUND.BEMERKUNG%TYPE,
+    P_Info_Datum                QUALITATIVER_BEFUND.TAG_DER_MESSUNG%TYPE 
     );
     
     p_indiv r_indiv;
@@ -65,6 +74,9 @@ if (P_IS_TEST=0) then
         
         --Erstellung des Berichst in Tabelle BERICHT loggen
         UKE_SP_INSERT_BERICHT(p_indiv.P_GTDS_ID, p_indiv.P_TUMOR_ID,P_BERICHTSNAME,NULL,NULL,P_BENUTZER,'UKE');   
+         -- Erstellung des Berichts in Tabelle UKE_EVENT_LOG loggen
+        UKE_SP_INSERT_EVENT(p_indiv.P_GTDS_ID,p_indiv.P_TUMOR_ID,'Diagnose',p_indiv.P_TUMOR_ID,SYSDATE,'BERICHTE',
+                              'UKE_'||P_BERICHTSNAME,'erstellt',NULL,'FU_Zentrum: ' ||P_FollowUpZentrum||'|'|| 'FU_Stichtag: ' ||P_FollowUpStichtag||'|'||'Jahr_Start: ' ||P_FollowUpZaehljahrStart||'|'||'Jahr_Ende: ' ||P_FollowUpZaehljahrEnd,P_BENUTZER);
         
         
        -- p_num:=1;
