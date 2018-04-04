@@ -71,12 +71,12 @@ on p.pat_id=EXTERNER_PATIENT.pat_id
 or p.PATIENTEN_ID= EXTERNER_PATIENT.PATIENTEN_ID
 left outer join TUMOR T on 
 T.FK_PATIENTPAT_ID=EXTERNER_PATIENT.pat_id
-  and exists(select 1 from 
+  and (:FILTERCODE=250 or exists(select 1 from 
     AW_KLASSEN_ALLE b
         where T.ICD10 like b.Like_Kriterium
         and b.klassierung_id=5 
             and b.KLASSIERUNG_QUELLE='UKE'
-            and b.KLASSE_CODE=:FILTERCODE)/**/
+            and b.KLASSE_CODE=:FILTERCODE))/**/
   left outer join QUALITATIVER_BEFUND qba --Arbeitslisteninfos   
 on T.FK_PATIENTPAT_ID=qba.FK_VORHANDENE_DFK
  and T.TUMOR_ID=qba.FK_VORHANDENE_DLFD
@@ -153,7 +153,7 @@ or p.PAT_ID is null
 ---Filterbedingung für Entität
 AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen 
       or
-      :FILTERCODE=150 --Metastasenfilter wird so ausgeschlossen 
+      :FILTERCODE=140 --Metastasenfilter wird so ausgeschlossen 
       or
       EXISTS (
               SELECT 1 FROM EXTERNE_DIAGNOSE ED
@@ -187,6 +187,9 @@ and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=
 and (
   :FILTERCODE<>250
  or (
+      
+      (qba.Fk_Qualitative_ID is null or qba.Fk_Qualitative_ID in (1,2,3,10))
+      and
       not EXISTS ( -- Alle ICD Codes der anderen Filter ausser der Generelle "Alles"-Filter (240) werden ausgeschlossen
       SELECT 1 FROM EXTERNE_DIAGNOSE ED
       inner join 
