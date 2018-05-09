@@ -301,6 +301,10 @@ begin
              if (r_teil.APPLIKATIONSART is null) then
                   select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Applikationsart;'||V_NL into V_ERGEBNIS from DUAL;
              end if;
+          -- Teil-Bestrahlung ohne EInheit (ADT V2)
+          if (r_teil.GY_GBQ is null) then
+                  select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Einheit;'||V_NL into V_ERGEBNIS from DUAL;
+             end if;
           --Bei vorhandenem Enddatum Gesamtdosis und Grund Therapieende (Vorgehen) prüfen
             if (r_Teil.ENDE is not null) then
               if(r_teil.GESAMTDOSIS is null) then

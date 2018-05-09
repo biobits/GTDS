@@ -57,7 +57,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
   union all
   select IB.BEFUND_DATUM,IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
   union all
-  select apb.BEGINN,FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb ) XT
+  select apb.BEGINN,FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
   where XT.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XT.IMPORT_QUELLE='UKE'
   and XT.DATUm is not null
   
@@ -92,9 +92,7 @@ AND MONTHS_BETWEEN(SYSDATE, EXTERNER_PATIENT.Geburtsdatum)/12 >= 17.5
 and
 --Filterbedingung Änderungszeitraum
 ( 
-  
-
-  
+    
  ( 
   (
     ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.AENDERUNGSDATUM)-- and EXTERNER_PATIENT.AENDERUNGSDATUM between :startdatum and :enddatum
@@ -111,43 +109,11 @@ and
   or exists
     (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' --and IB.BEFUND_DATUM between :startdatum and :enddatum 
       and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<IB.BEFUND_DATUM)) --EIne EInwilligung für das KKR im Zeitraum
-  
+  or exists
+    (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG AB where AB.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and AB.IMPORT_QUELLE='UKE'
+      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<AB.BEGINN) and AB.BEGINN<=SYSDATE) --Einen aktuellen Aufenthalt
 )
---Filterbedingung: Wenn letzte Bearbeitung kleiner ENdatum des Änderungszeitraumes oder Patient nicht im GTDS
-/*and (  exists -- Merkmal Arbeistliste mit Datum kleiner Enddatum und kleiner "Arbeitslistendatum"
-(select 1 from 
-  QUALITATIVER_BEFUND qb  inner join Tumor T
-  on T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
-  and T.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
-  inner join 
-   AW_KLASSEN_ALLE b
-  on T.ICD10 like b.Like_Kriterium
-  WHERE 
-  b.klassierung_id=5 
-  and b.KLASSIERUNG_QUELLE='UKE'
-  and b.KLASSE_CODE=:FILTERCODE
-  and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
-  and qb.FK_VORHANDENE_DDAT='Diagnose'
-  and qb.FK_QUALITATIVE_FK=19
-and ((qb.TAG_DER_MESSUNG<:enddatum and qb.TAG_DER_MESSUNG<:bearbeitungsdatum) or qb.TAG_DER_MESSUNG is null)
-) 
 
-
-or not exists ( -- Kein Merkmal Arbeistliste für diesen Tumortyp (ICD-Bereich) vorhanden
-  select 1 from 
-  QUALITATIVER_BEFUND qb  inner join Tumor T
-  on T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
-  and T.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
-  inner join 
-   AW_KLASSEN_ALLE b
-   on T.ICD10 like b.Like_Kriterium
-   WHERE b.klassierung_id=5 
-  and b.KLASSIERUNG_QUELLE='UKE'
-  and b.KLASSE_CODE=:FILTERCODE
-  and qb.FK_VORHANDENE_DFK=EXTERNER_PATIENT.PAT_ID
-  and qb.FK_VORHANDENE_DDAT='Diagnose'
-  and qb.FK_QUALITATIVE_FK=19
-  )*/
 or p.PAT_ID is null
 )
 ---Filterbedingung für Entität
@@ -165,10 +131,8 @@ AND ( :FILTERCODE=250 --Restefilter wird so ausgeschlossen
               and b.KLASSIERUNG_QUELLE='UKE'
               and b.KLASSE_CODE=:FILTERCODE  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
               ) --STATUS dient dem aussortieren unerwünschter / falscher Diagnosen
-     
-      )
+       )
   
-
 --FIlterbedingung Primärfall
 and (exists
   (
@@ -187,6 +151,7 @@ and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=
 and (
   :FILTERCODE<>250
  or (
+      (-- Filterung anhand des Ausschlusses aller anderen DIagnosen
       
       (qba.Fk_Qualitative_ID is null or qba.Fk_Qualitative_ID in (1,2,3,10))
       and
@@ -212,20 +177,15 @@ and (
              --,'266910','126148','266710','266730','266920','26672'--Martiniklinik
              )
             ) 
-       --               and p.PATIENTEN_ID=EXTERNER_PATIENT.PATIENTEN_ID
-      /*and EXISTS (  -- Verbleibende ICD-Cdes werden über den "Alle"-Filter eingeschlossen
-              SELECT 1 FROM EXTERNE_DIAGNOSE ED
-              inner join 
-               AW_KLASSEN_ALLE b
-               on ED.FK_ICDICD like b.Like_Kriterium
-               WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
-              and b.klassierung_id=5 
-              and b.KLASSIERUNG_QUELLE='UKE'
-              and b.KLASSE_CODE=240  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
-              )*/
         )
-)
-
+       or
+        (--Filterung des Sonderfalls, wenn keine externe diagnose vorhanden ist und der Patien schon im GTDS vorhanden
+        p.PAT_ID is not null and not exists ( SELECT 1 FROM EXTERNE_DIAGNOSE ED
+                                      WHERE ED.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID)
+                                      and (qba.Fk_Qualitative_ID is null or qba.Fk_Qualitative_ID in (1,2,3,10))  -- Arbeitsliste soll keinem Dokumentar zugeordnet sein
+        )
+    )
+  )
 --Filterbedingung Metastasen
 and (
   :FILTERCODE<>140

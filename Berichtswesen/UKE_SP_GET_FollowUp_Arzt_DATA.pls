@@ -41,7 +41,14 @@ BEGIN
       and qb.FK_VORHANDENE_DFK=pa.PAT_ID
       and qb.FK_VORHANDENE_DLFD=aus.TUMOR_ID
       and qb.FK_QUALITATIVE_FK=80-- Follow-Up Info
-       where aus.sterbedatum is null
+       where (aus.sterbedatum is null or (aus.sterbedatum is not null and exists
+                (select 1  FROM QUALITATIVER_BEFUND qb 
+                  WHERE aus.Pat_ID = qb.Fk_Vorhandene_DFK
+                  AND aus.TUMOR_ID = qb.Fk_Vorhandene_DLFD
+                  AND qb.Fk_Qualitative_Fk = 80         -- Merkmal ist Follow-Up Info
+                  AND qb.Fk_Vorhandene_DDAT = 'Diagnose'
+                  and qb.FK_QUALITATIVE_ID = 2))
+                  ) -- Ausprägung ist "Postmortale Anfrage
        and aus.VORGANG_ID=0
         AND NOT EXISTS (select * from vorhandene_daten ch where
              datenart = 'Abschluss' and
