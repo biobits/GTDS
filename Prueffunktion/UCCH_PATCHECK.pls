@@ -13,6 +13,7 @@
 -- 20170330: Mitgliedsnummer wird geprüft
 -- 20170419: SV Nummer prüfung; Hausnummer Regex
 -- 20170615: C90% Patienten Klassifikastionen zugeordnet -> Holger
+-- 20180621: Teilbestrahlung wird auf korrekte EInheiten gemäß ADT V2 geprüft
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -128,7 +129,7 @@ end if;
 --ICD10 ermitteln
 select ICD10,DURCHFUEHRENDE_ABT_ID,DIAGNOSEDATUM,MELDEANLASS into V_ICD,V_DIAG_ABT,V_DIAG_DATUM,V_DIAG_MELDEANLASS from Tumor where FK_PATIENTPAT_ID=PATID and Tumor_id=TUMID;
 
-if V_ICD is null then
+if V_ICD is null then 
   select V_ERGEBNIS||'ICD-10 Diagnose fehlt;'||V_NL into V_ERGEBNIS from DUAL;
 end if;
 
@@ -148,7 +149,7 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
   
   --KLASSIFIKATION
   --SOnstige Klassifikation (hämatologisch, Hirntumor)
-  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0')) where V_ICD like column_value;
+  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86%','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0')) where V_ICD like column_value;
   --FIGO Benötigt?
   select count(column_value) into v_COUNTER2 from table(sys.dbms_debug_vc2coll('C53%','C56%','C57%')) where V_ICD like column_value;
   -- Sonderfall DIagnose und OP am gleichen Tag und pTNM dann bei OP
@@ -304,6 +305,10 @@ begin
           -- Teil-Bestrahlung ohne EInheit (ADT V2)
           if (r_teil.GY_GBQ is null) then
                   select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Einheit;'||V_NL into V_ERGEBNIS from DUAL;
+             end if;
+          -- Teil-Bestrahlung falsche EInheit (ADT V2)
+          if (r_teil.GY_GBQ is not null and r_teil.GY_GBQ not in ('Gy','GBq')) then
+                  select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne korrekte Einheit (Gy,GBq);'||V_NL into V_ERGEBNIS from DUAL;
              end if;
           --Bei vorhandenem Enddatum Gesamtdosis und Grund Therapieende (Vorgehen) prüfen
             if (r_Teil.ENDE is not null) then

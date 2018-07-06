@@ -1,5 +1,10 @@
--- alter session set nls_sort=binary;
+/*
+-- Abfrage zur Arbeitsliste im GTDS
 -- 
+--Änderungen:
+  20180525: Zeitpunkt der neusten Meldungen parametriert  
+
+*/
 ---Arbeistliste
 select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
 p.pat_id GTDS_ID,EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM,
@@ -51,17 +56,28 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' ) as PRIMFALL_KKR,
   
  (select max(Datum) from 
-(select ED.DATUM as Datum,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
+(select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
   union all
-  select EP.DATUM,EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
+  select EP.DATUM,'Proz.',EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
   union all
-  select IB.BEFUND_DATUM,IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
+  select IB.BEFUND_DATUM,'Einw.',IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
   union all
-  select apb.BEGINN,FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
+  select apb.BEGINN,'Aufe.',FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
   where XT.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XT.IMPORT_QUELLE='UKE'
   and XT.DATUm is not null
   
   ) as MAX_EXT_DAT
+/*(Select XB.Datum||' ('||XB.Typ||')' from (select XT.* ,
+ROW_NUMBER() OVER (partition by XT.Patienten_ID order by XT.Datum desc) rno
+from (select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
+  union all
+  select EP.DATUM,'Proz.',EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
+  union all
+  select IB.BEFUND_DATUM,'Einw.',IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
+  union all
+  select apb.BEGINN,'Aufe.',FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
+  where  XT.IMPORT_QUELLE='UKE' 
+  and XT.DATUm is not null)XB where XB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XB.rno=1) as MAX_EXT_DAT*/
   
 from 
 EXTERNER_PATIENT 
@@ -95,23 +111,23 @@ and
     
  ( 
   (
-    ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.AENDERUNGSDATUM)-- and EXTERNER_PATIENT.AENDERUNGSDATUM between :startdatum and :enddatum
+    ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.AENDERUNGSDATUM) and EXTERNER_PATIENT.AENDERUNGSDATUM <= :enddatum
       )
-  or ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.IMPORT_DATUM)-- and  EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM between :startdatum and :enddatum
+  or ((qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EXTERNER_PATIENT.IMPORT_DATUM) and EXTERNER_PATIENT.IMPORT_DATUM <= :enddatum
       )
   )
   or exists
-    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' --and ED.DATUM between :startdatum and :enddatum
+    (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' and ED.DATUM <= :enddatum
      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<ED.DATUM) and (ED.STATUS not in ('V','B') or ED.STATUS is null) ) --EIne Externe Diagnose im Zeitraum
   or exists
-    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' --and EP.DATUM between :startdatum and :enddatum
+    (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' and EP.DATUM <= :enddatum
       and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EP.DATUM) and (EP.STATUS not in ('V','B') or EP.STATUS is null)) --EIne Externe Prozedur im Zeitraum
   or exists
-    (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' --and IB.BEFUND_DATUM between :startdatum and :enddatum 
+    (select 1 from IMPORT_QUALITATIVER_BEFUND IB where IB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and IB.IMPORT_QUELLE='UKE' and IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR' and IB.BEFUND_DATUM <= :enddatum 
       and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<IB.BEFUND_DATUM)) --EIne EInwilligung für das KKR im Zeitraum
   or exists
     (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG AB where AB.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and AB.IMPORT_QUELLE='UKE'
-      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<AB.BEGINN) and AB.BEGINN<=SYSDATE) --Einen aktuellen Aufenthalt
+      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<AB.BEGINN) and AB.BEGINN<= :enddatum) --Einen aktuellen Aufenthalt
 )
 
 or p.PAT_ID is null
