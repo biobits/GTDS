@@ -1,8 +1,15 @@
 /*
 -- Abfrage zur Arbeitsliste im GTDS
 -- 
+-- Codes mit ausnahmebedingungen
+-- 250 : Rest
+-- 240 : ALLE
+-- 140 : Metastasen
+-- 200 : Prostata
 --Änderungen:
   20180525: Zeitpunkt der neusten Meldungen parametriert  
+  20180801: Zusatzbedingungen für Prostataca -> Filter auf ausschließliche Martiniklinik Aufenthalte, Patienten mit Stammdatenupdate >01.01.2018 und
+              ohne Patienten die als alleinige (zusätzliche) Abteilung die UR KERN aufweisen
 
 */
 ---Arbeistliste
@@ -230,6 +237,34 @@ and (
               and b.KLASSE_CODE=:FILTERCODE  and (ED.STATUS not in ('V','B') or ED.STATUS is null)
               )
       )
+)
+--Filterbedingung Prostata Martiniklinik
+and (
+ :FILTERCODE <>200
+ or (
+ ( (EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM>'01.01.2018') or EXTERNER_PATIENT.AENDERUNGSDATUM>'01.01.2018') -- Nur Patienten ab 01.01.2018
+ and
+ EXISTS(
+    SELECT 1
+    FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+    WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+    AND ABP1.Fk_AbteilungAbteil not IN ('266910','26691','266920','26692','126148','266710','26671','266730','26673','267750','26775','26672')
+
+    )
+ and not exists( -- Patienten die in der Martiniklinik einen Aufenthalt hatten und zudem nur (!) in der Abt. UR KERN
+    SELECT 1
+     FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+     WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+     AND ABP1.Fk_AbteilungAbteil IN ('266910','26691','266920','26692','126148','266710','26671','266730','26673','26672')
+       and exists  (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG ABP2 where ABP1.Fk_Externe_Patienten_ID=ABP2.Fk_Externe_Patienten_ID 
+                      and ABP2.Fk_AbteilungAbteil  ='25971'
+                      )
+       and not exists  (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG ABP3 where ABP1.Fk_Externe_Patienten_ID=ABP3.Fk_Externe_Patienten_ID 
+                      and ABP3.Fk_AbteilungAbteil not IN ('266910','26691','266920','26692','126148','266710','26671','266730','26673','25971','26672')
+                      )               
+  )
+ 
+ )
 )
 
 
