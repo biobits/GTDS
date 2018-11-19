@@ -10,6 +10,7 @@
   20180525: Zeitpunkt der neusten Meldungen parametriert  
   20180801: Zusatzbedingungen für Prostataca -> Filter auf ausschließliche Martiniklinik Aufenthalte, Patienten mit Stammdatenupdate >01.01.2018 und
               ohne Patienten die als alleinige (zusätzliche) Abteilung die UR KERN aufweisen
+  20181106: Todesmeldungen ergänzt
 
 */
 ---Arbeistliste
@@ -85,7 +86,8 @@ from (select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENT
   select apb.BEGINN,'Aufe.',FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
   where  XT.IMPORT_QUELLE='UKE' 
   and XT.DATUm is not null)XB where XB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XB.rno=1) as MAX_EXT_DAT*/
-  
+, case when (EXTERNER_PATIENT.STerbedatum is not null and p.Sterbedatum is null) then 'J' else null end as Sterbemeldung
+,EXTERNER_PATIENT.STerbedatum 
 from 
 EXTERNER_PATIENT 
 left outer join 
