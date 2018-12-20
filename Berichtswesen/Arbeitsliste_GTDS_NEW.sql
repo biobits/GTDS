@@ -11,7 +11,8 @@
   20180801: Zusatzbedingungen für Prostataca -> Filter auf ausschließliche Martiniklinik Aufenthalte, Patienten mit Stammdatenupdate >01.01.2018 und
               ohne Patienten die als alleinige (zusätzliche) Abteilung die UR KERN aufweisen
   20181106: Todesmeldungen ergänzt
-
+  20181217: Externe Metastasen ergänzt via left outer join einer subquery
+  20181220: Zweiter Melanomfilter für Patienten, die mind. einen Aufenthalt in der HT Kern oder Haut-Ambulanz hatten (Filter 290)
 */
 ---Arbeistliste
 select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
@@ -34,13 +35,15 @@ and qb.FK_QUALITATIVE_FK=19) as Letzte_Bearbeitung,
 
 case when EXTERNER_PATIENT.PAT_ID is null and p.pat_id is not null then 1 else 0 end Link_Missing,
 case when p.pat_id is not null then 1 else 0 end Im_GTDS,
- (
+/* (
 	SELECT LISTAGG(Fk_IcdIcd,' | ') WITHIN GROUP (order by Fk_IcdIcd) as X  FROM 
   (select distinct ED.Fk_Externe_Patienten_ID,ED.Fk_IcdIcd from EXTERNE_DIAGNOSE ED
 	WHERE (ED.FK_ICDICD like 'C%' or ED.FK_ICDICD like 'D%')
   ) where Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID 
   
-	) as Externe_Diagnosen,
+	) as Externe_Diagnosen,*/
+  qay.Diagnosen_Ext as Externe_Diagnosen,
+  qay.Metastasen_Ext as Externe_Metastasen,
  (
 	SELECT LISTAGG(ICD10,' | ') WITHIN GROUP (order by T.DIAGNOSEDATUM desc) from TUMOR T
 	 where t.FK_PATIENTPAT_ID = P.Pat_ID 
@@ -110,6 +113,13 @@ and qba.FK_QUALITATIVE_FK=19
 left outer join QUALITATIVE_AUSPRAEGUNG qaa
   on qba.Fk_Qualitative_Fk = qaa.Fk_QualitativesID -- Merkmal
             AND qba.Fk_Qualitative_ID = qaa.ID
+
+left outer join (select LISTAGG(ED.Fk_IcdIcd,' | ') WITHIN GROUP (order by ED.Fk_IcdIcd) as Diagnosen_Ext,
+    LISTAGG(case when substr(ED.Fk_IcdIcd,1,3) in ('C76','C77','C78','C79','C97') then ED.Fk_IcdIcd
+                when ED.Fk_IcdIcd in ('D09.7','D09.9')then ED.Fk_IcdIcd else Null end,' | ') WITHIN GROUP (order by ED.Fk_IcdIcd) Metastasen_EXT,
+    ED.Fk_Externe_Patienten_ID   from (select distinct Fk_Externe_Patienten_ID, Fk_IcdIcd from  EXTERNE_DIAGNOSE extd
+      WHERE (extd.FK_ICDICD like 'C%' or extd.FK_ICDICD like 'D%'))ED group by ED.Fk_Externe_Patienten_ID )qay on qay.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID 
+  
 where 
 EXTERNER_PATIENT.HAUPT_VERS_NAME='TUMORPATIENT'
 and EXTERNER_PATIENT.Import_Quelle = 'UKE'
@@ -259,7 +269,7 @@ and (
      WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
      AND ABP1.Fk_AbteilungAbteil IN ('266910','26691','266920','26692','126148','266710','26671','266730','26673','26672')
        and exists  (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG ABP2 where ABP1.Fk_Externe_Patienten_ID=ABP2.Fk_Externe_Patienten_ID 
-                      and ABP2.Fk_AbteilungAbteil  ='25971'
+                      and ABP2.Fk_AbteilungAbteil  = '25971' --UR Kern
                       )
        and not exists  (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG ABP3 where ABP1.Fk_Externe_Patienten_ID=ABP3.Fk_Externe_Patienten_ID 
                       and ABP3.Fk_AbteilungAbteil not IN ('266910','26691','266920','26692','126148','266710','26671','266730','26673','25971','26672')
@@ -269,5 +279,39 @@ and (
  )
 )
 
+--Filterbedingung Prostata nur in Abteilungen der Onko
+and (
+ :FILTERCODE <>270
+ or (
+ ( (EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM>'01.01.2018') or EXTERNER_PATIENT.AENDERUNGSDATUM>'01.01.2018') -- Nur Patienten ab 01.01.2018
+ and
+ EXISTS(
+    SELECT 1
+    FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+    WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+    AND ABP1.Fk_AbteilungAbteil IN ('8975','12973','8982','14972')
+
+    )
+
+ 
+ )
+)
+--Filterbedingung Melanome nur in Abteilungen der Hautklinik /Ambulanz
+and (
+ :FILTERCODE <>290
+ or(
+ /* ( (EXTERNER_PATIENT.AENDERUNGSDATUM is null and EXTERNER_PATIENT.IMPORT_DATUM>'01.01.2018') or EXTERNER_PATIENT.AENDERUNGSDATUM>'01.01.2018') -- Nur Patienten ab 01.01.2018
+ and*/
+ EXISTS(
+    SELECT 1
+    FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+    WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+    AND ABP1.Fk_AbteilungAbteil IN ('5971','267800 ','26780')
+
+    )
+
+ 
+ )
+)
 
 ;
