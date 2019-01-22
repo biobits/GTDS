@@ -13,6 +13,7 @@
   20181106: Todesmeldungen ergänzt
   20181217: Externe Metastasen ergänzt via left outer join einer subquery
   20181220: Zweiter Melanomfilter für Patienten, die mind. einen Aufenthalt in der HT Kern oder Haut-Ambulanz hatten (Filter 290)
+
 */
 ---Arbeistliste
 select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,EXTERNER_PATIENT.PAT_ID,
