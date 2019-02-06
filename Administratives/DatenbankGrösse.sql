@@ -1,0 +1,27 @@
+select TABLESPACE_NAME "Tablspace",  FILE_NAME "Filename",   BYTES/1024/1024 "Size MB",  MAXBYTES/1024/1024 "Maximum Size MB",  AUTOEXTENSIBLE "Autoextensible"
+from SYS.DBA_DATA_FILES;
+ 
+SELECT * FROM
+(
+select SEGMENT_NAME,  SEGMENT_TYPE, BYTES/1024/1024/1024 GB,  TABLESPACE_NAME
+from
+    dba_segments
+order by 3 desc 
+) WHERE
+ROWNUM <= 20;
+ 
+select * from USer_USERS;
+
+
+--I_EXTPROZ_IMPORT	204
+--EXTERNE_PROZEDUR	585,0625
+--EXTERNE_DIAGNOSE	424
+--ABTEILUNG_PATIENT_BEZIEHUNG	352
+--I_EXTDIAG_IMPORT	296
+--I_EXTPROZ_IMPORT	206
+select SEGMENT_NAME, BYTES/1024/1024 "Size MB"
+from USER_SEGMENTS where Bytes > 50000
+order by Bytes desc;
+
+purge tablespace GTDS;
+purge recyclebin;
