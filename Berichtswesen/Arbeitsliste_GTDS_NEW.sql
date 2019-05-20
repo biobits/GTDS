@@ -67,7 +67,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
             AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' ) as PRIMFALL_KKR,
   
- (select max(Datum) from 
+ /* (select max(Datum) from 
 (select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
   union all
   select EP.DATUM,'Proz.',EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
@@ -78,18 +78,22 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
   where XT.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XT.IMPORT_QUELLE='UKE'
   and XT.DATUm is not null
   
-  ) as MAX_EXT_DAT
-/*(Select XB.Datum||' ('||XB.Typ||')' from (select XT.* ,
-ROW_NUMBER() OVER (partition by XT.Patienten_ID order by XT.Datum desc) rno
-from (select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED 
+  ) as MAX_EXT_DAT*/
+ (select Datum||' - '||Typ from
+(select ED.DATUM as Datum,'Diag.' as Typ,ED.FK_EXTERNE_PATIENTEN_ID PATIENTEN_ID,ED.IMPORT_QUELLE  from EXTERNE_DIAGNOSE ED
   union all
-  select EP.DATUM,'Proz.',EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP  
+  select EP.DATUM,'Proz.',EP.FK_EXTERNE_PATIENTEN_ID,EP.IMPORT_QUELLE from EXTERNE_PROZEDUR EP 
   union all
   select IB.BEFUND_DATUM,'Einw.',IB.PATIENTEN_ID,IB.IMPORT_QUELLE from IMPORT_QUALITATIVER_BEFUND IB where IB.EXTERNE_BEFUNDART_ID='EINWILLIGUNG_KKR'
   union all
-  select apb.BEGINN,'Aufe.',FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE ) XT
-  where  XT.IMPORT_QUELLE='UKE' 
-  and XT.DATUm is not null)XB where XB.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XB.rno=1) as MAX_EXT_DAT*/
+  select apb.BEGINN,'Aufe.',FK_EXTERNE_PATIENTEN_ID,apb.IMPORT_QUELLE from ABTEILUNG_PATIENT_BEZIEHUNG apb where apb.BEGINN<=SYSDATE
+  union all
+  select nvl(ep1.AENDERUNGSDATUM,ep1.IMPORT_DATUM) as Datum,'Stamm.' as Typ,PATIENTEN_ID,Import_Quelle from EXTERNER_PATIENT ep1
+  order by 1 desc  ) XT 
+  where XT.PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and XT.IMPORT_QUELLE='UKE'
+  and XT.DATUm is not null and ROWNUM=1
+  )as MAX_EXT_DAT
+
 , case when (EXTERNER_PATIENT.STerbedatum is not null and p.Sterbedatum is null) then 'J' else null end as Sterbemeldung
 ,EXTERNER_PATIENT.STerbedatum 
 from 
@@ -181,7 +185,8 @@ and (exists
             AND qb.Fk_Vorhandene_DDAT = 'Diagnose' )
   ) or nvl(:primfall,0)=0
 )
-and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=0)
+and (EXTRACT(YEAR FROM t.DIAGNOSEDATUM) = :gtdsdiagjahr or nvl(:gtdsdiagjahr,0)=0 
+      or nvl(EXTRACT(YEAR FROM t.DIAGNOSEDATUM),1)=:gtdsdiagjahr)
 
 --Filterbedingung Rest
 and (
