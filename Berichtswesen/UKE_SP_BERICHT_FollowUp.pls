@@ -11,6 +11,7 @@ create or replace PROCEDURE UKE_SP_BERICHT_FOLLOWUP
 ) AS 
    type r_indiv is record(
     P_GTDS_ID                   PATIENT.PAT_ID%TYPE ,
+    P_TITEL                     PATIENT.TITEL%TYPE ,
     P_VORNAME                   PATIENT.VORNAME%TYPE,
     P_NAME                      PATIENT.NAME%TYPE,
     P_GEBURTSDATUM              PATIENT.GEBURTSDATUM%TYPE ,
@@ -28,7 +29,14 @@ create or replace PROCEDURE UKE_SP_BERICHT_FOLLOWUP
     P_DOK_NAME                  BENUTZER.NAME%TYPE,
     P_DOK_VORNAME               BENUTZER.VORNAME%TYPE,
     P_TELEFON                   BENUTZER.TELEFON%TYPE,
-    P_EMAIL                     BENUTZER.EMAIL%TYPE );
+    P_EMAIL                     BENUTZER.EMAIL%TYPE ,
+    P_FU_Info_Auspraegung       QUALITATIVE_AUSPRAEGUNG.auspraegung%TYPE,
+    P_FU_Info_Text              QUALITATIVE_AUSPRAEGUNG.beschreibung%TYPE ,
+    P_FU_Info_Bemerkung         QUALITATIVER_BEFUND.bemerkung%TYPE,
+    P_Arbeitsliste_Auspraegung  QUALITATIVE_AUSPRAEGUNG.auspraegung%TYPE,
+    P_Arbeitsliste_Text         QUALITATIVE_AUSPRAEGUNG.beschreibung%TYPE ,
+    P_Arbeitsliste_Bemerkung    QUALITATIVER_BEFUND.bemerkung%TYPE
+    );
     p_indiv r_indiv;
     p_intrec SYS_REFCURSOR;
     p_num number; --Zum testen
