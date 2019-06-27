@@ -70,7 +70,13 @@ BEGIN
                   AND qb.Fk_Qualitative_Fk = 28          -- Merkmal ist Primärfall
                   AND qb.Fk_Vorhandene_DDAT = 'Diagnose'
                   and qb.FK_QUALITATIVE_ID = 1)--"Ja")
-      and aus.KKR_EINWILLIGUNG<>'N'
+        and not exists (select 1  FROM QUALITATIVER_BEFUND qb 
+                  WHERE aus.Pat_ID = qb.Fk_Vorhandene_DFK
+                  AND aus.TUMOR_ID = qb.Fk_Vorhandene_DLFD
+                  AND qb.Fk_Qualitative_Fk = 80          -- Merkmal Follow-Up Info
+                  AND qb.Fk_Vorhandene_DDAT = 'Diagnose'
+                  and qb.FK_QUALITATIVE_ID = 4) -- Ausprägung: Kein FU
+       -- and aus.KKR_EINWILLIGUNG<>'N' --Am 07.06.2019 deaktivioert da, Forschung hier nicht relevant und Steuerung über FU-Info Merkmal
         and aus.LETZTER_STATUS_DATUM<=trunc(to_date(P_FollowUpStichtag))
  and (P_FollowUpZaehljahrStart is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))>=P_FollowUpZaehljahrStart)
   and (P_FollowUpZaehljahrEnd is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))<=P_FollowUpZaehljahrEnd  ) 

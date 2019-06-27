@@ -6,6 +6,7 @@
 -- 240 : ALLE
 -- 140 : Metastasen
 -- 200 : Prostata
+-- 270 : Prostata Onko
 --Änderungen:
   20180525: Zeitpunkt der neusten Meldungen parametriert  
   20180801: Zusatzbedingungen für Prostataca -> Filter auf ausschließliche Martiniklinik Aufenthalte, Patienten mit Stammdatenupdate >01.01.2018 und
@@ -13,6 +14,7 @@
   20181106: Todesmeldungen ergänzt
   20181217: Externe Metastasen ergänzt via left outer join einer subquery
   20181220: Zweiter Melanomfilter für Patienten, die mind. einen Aufenthalt in der HT Kern oder Haut-Ambulanz hatten (Filter 290)
+  20190627: Prostata Onko Filter nur für Onkoambulanz ('8975') und nicht der ganze Onko Bereich ('8975','12973','8982','14972')
 
 */
 ---Arbeistliste
@@ -295,7 +297,7 @@ and (
     SELECT 1
     FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
     WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
-    AND ABP1.Fk_AbteilungAbteil IN ('8975','12973','8982','14972')
+    AND ABP1.Fk_AbteilungAbteil IN ('8975')--,'12973','8982','14972')
 
     )
 
