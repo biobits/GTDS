@@ -1,30 +1,27 @@
-select distinct Ort from Konsil order by ORT;
+select distinct Ort from Konsil order by ORT desc;
 select * from eigene_merkmale  where merkmal='KONSIL.ORT' order by beschreibung;
 
---Pflege ASV Tumorboard
+--Pflege HNO Tumorboard
 update KOnsil
-set Ort='ASV Tumorboard'
-where upper(Ort) like 'ASV%';
+set Ort='Kopf-Hals Tumorboard'
+where upper(Ort) like 'HNO%';
 
---Pflege GI Tumorboard
+--Pflege HNO Tumorboard
 update KOnsil
-set Ort='GI Tumorboard'
-where upper(Ort) like 'GI%' or upper(Ort) like '%GI%';
+set Ort='Kopf-Hals Tumorboard'
+where Ort = 'KOPF-HALS Tumorboard';
 
---Pflege CHIR Tumorboard
+--Pflege HNO Tumorboard
 update KOnsil
-set Ort='CHIR Tumorboard'
-where upper(Ort) like 'CHIR%' or upper(Ort) like '%CHIR%';
+set Ort='Kopf-Hals Tumorboard'
+where upper(Ort) like 'ZMK%';
+
 
 --Pflege Gyn Tumorboard
 update KOnsil
 set Ort='GYN Tumorboard'
 where upper(Ort) like 'GYN%';
 
---Pflege Derma Tumorboard
-update KOnsil
-set Ort='DERMA Tumorboard'
-where upper(Ort) like 'DERMA%';
 
 --Pflege Molekulares  Tumorboard
 update KOnsil
@@ -34,17 +31,13 @@ where upper(Ort) like 'MOLEK%' or upper(Ort) like '%MOLEK%';
 --PflegeMyelom  Tumorboard
 update KOnsil
 set Ort='Lymphom- und Myelomboard'
-where upper(Ort) like '%MYELOM%' or upper(Ort) like 'MYELOM%' or upper(Ort) like 'LYMPHO%';
+where upper(Ort) like '%MYELOM%' or upper(Ort) like 'MYELOM%' or upper(Ort) like 'LYMPHO%' or upper(Ort) like 'MYLE%';
 
---Pflege Neuro Tumorboard
-update KOnsil
-set Ort='NEURO Tumorboard'
-where upper(Ort) like 'NEURO%' ;
 
 --Pflege Int. Onko. Tumorboard
 update KOnsil
 set Ort='ONKO Tumorboard'
-where upper(Ort) like '%ONKO%' or upper(Ort) like 'ONKO%';
+where upper(Ort) like '%ONKO%' or upper(Ort) like 'ONKO%' or Ort='ONKTumorboard';
 
 --Pflege Thorax Tumorboard
 update KOnsil
@@ -63,7 +56,7 @@ where upper(Ort) like 'LEUKÄMIE%' ;
 
 --Pflege Inter.Therapie Empf. Tumorboard -ALT
 update KOnsil
-set Ort='Inter.Therapie Empf.'
+set Ort='Interdisziplinäre Therapieempfehlung'
 where upper(Ort) like '%EMPFEHLUNG%' ;
 
 --Pflege Tele Tumorboard
@@ -91,15 +84,11 @@ update KOnsil
 set Ort='Prostata Tumorboard'
 where upper(Ort) like 'PROSTATA%' ;
 
---Pflege Kopf-Hals Tumorboard
+--Pflege DERMA Tumorboard
 update KOnsil
-set Ort='Kopf-Hals Tumorboard'
-where upper(Ort) like 'KOPF-HALS%' ;
+set Ort='DERMA Tumorboard'
+where upper(Ort) like 'DERMA%' ;
 
---Pflege Extern Tumorboard
-update KOnsil
-set Ort='EXTERN Tumorboard'
-where upper(Ort) like 'EXTERN%' or upper(Ort) like '%EXTERN%'  ;
 
 --rollback;
 --commit; 
