@@ -9,7 +9,7 @@ CREATE OR REPLACE PROCEDURE UKE_SP_GET_FU_ARZT_DATA
 BEGIN
   open P_FU_DATEN for
  select distinct pa.pat_id,pa.vorname,pa.name,pa.geburtsdatum,pa.geschlecht
-  ,pa.strasse,pa.plz,pa.Ort,pa.VORWAHL Patient_Vorwahl,pa.TELEFON as Patient_Telefon,
+  ,pa.strasse,pa.plz,pa.Ort,pa.VORWAHL Patient_Vorwahl,pa.TELEFON as Patient_Telefon,pa.sterbedatum,
      aus.LETZTER_STATUS_DATUM,
      aus.LETZTER_STATUS_DATENART,
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,

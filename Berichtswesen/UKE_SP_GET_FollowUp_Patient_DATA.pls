@@ -71,7 +71,10 @@ where aus.sterbedatum is null
                   AND qb.Fk_Qualitative_Fk = 80          -- Merkmal Follow-Up Info
                   AND qb.Fk_Vorhandene_DDAT = 'Diagnose'
                   and (qb.FK_QUALITATIVE_ID = 3 or qb.FK_QUALITATIVE_ID = 4))--"Keine Anfrage an Patient")
-     -- and aus.KKR_EINWILLIGUNG<>'N' --Am 07.06.2019 deaktivioert da, Forschung hier nicht relevant und Steuerung über FU-Info Merkmal
+      and (aus.KKR_EINWILLIGUNG<>'N' or aus.KKR_EINWILLIGUNG is null)  --Am 02.09.2019 wieder aktiviert
+      ---Nachsorgezustimmung: Wenn 'Nein' dann keine FU-ANfrage
+      and not exists(Select 1 from Tumor tu where tu.fk_patientpat_id = aus.pat_id and tu.tumor_id=aus.tumor_id and tu.nachsorgezustimmun='N') 
+      
         and aus.LETZTER_STATUS_DATUM<=trunc(to_date(P_FollowUpStichtag))
  and (P_FollowUpZaehljahrStart is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))>=P_FollowUpZaehljahrStart)
   and (P_FollowUpZaehljahrEnd is null or (EXTRACT(YEAR FROM nvl(ak.ZAEHLDAT,aus.DIAGNOSEDATUM)))<=P_FollowUpZaehljahrEnd  ) 
