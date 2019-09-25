@@ -13,11 +13,16 @@ BEGIN
      aus.LETZTER_STATUS_DATUM,
      aus.LETZTER_STATUS_DATENART,
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,
-        nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
+        cast(nvl(de.TEXT30,'nicht zugeordnet') as VARCHAR2(30)) Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL,
       a.Name Arzt_Name, a.Vorname Arzt_Vorname, a.titel Arzt_Titel, a.Institution Arzt_Institution, a.Geschlecht Arzt_Geschlecht
       , a.Strasse Arzt_Strasse, a.PLZ Arzt_PLZ, a.Ort Arzt_Ort,a.ARZT_ID
       ,a.VORWAHL Arzt_Vorwahl,a.TELEFON Arzt_Telefon
+      --LISTAGG(ICD10,' | ') WITHIN GROUP (order by T.DIAGNOSEDATUM desc) from TUMOR T
+     ,(select cast(LISTAGG(f.bezeichnung,', ')   WITHIN GROUP (order by f.BEZEICHNUNG) as VARCHAR2(500)) from  BEZEICHNET_GEBIET_DES g
+            inner join fachrichtungen f
+            on g.fk_fachrichtunggeb=f.gebiet_id
+            where g.fk_arztarzt_id=a.arzt_id) as Arzt_Fachrichtungen
       ,ap.BERICHTSBEGINN,ap.BERICHTSENDE,ap.HAUSARZT
       ,qb.BEMERKUNG as Follow_Up_Info,qb.TAG_DER_MESSUNG as Info_Datum
       FROM AUSWERTUNG aus inner join Patient pa

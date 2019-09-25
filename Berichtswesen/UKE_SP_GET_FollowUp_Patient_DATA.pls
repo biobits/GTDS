@@ -13,7 +13,7 @@ BEGIN
      aus.LETZTER_STATUS_DATUM,
      aus.LETZTER_STATUS_DATENART,
      aus.TUMOR_ID,aus.DIAGNOSEDATUM,aus.ICD10,aus.DIAGNOSETEXT,
-        nvl(de.TEXT30,'nicht zugeordnet') Dokumentar
+        cast(nvl(de.TEXT30,'nicht zugeordnet') as varchar2(30)) Dokumentar
       ,be.NAME DOK_NAME,be.VORNAME DOK_VORNAME,be.TELEFON,be.EMAIL
     ,qaa.auspraegung FU_Info_Auspraegung,qaa.beschreibung FU_Info_Text ,qb.bemerkung FU_Info_Bemerkung
     ,qaa2.auspraegung Arbeitsliste_Auspraegung,qaa2.beschreibung Arbeitsliste_Text ,qb2.bemerkung Arbeitsliste_Bemerkung
