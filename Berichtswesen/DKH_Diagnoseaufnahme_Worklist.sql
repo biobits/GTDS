@@ -27,7 +27,8 @@ BEGIN
     
 ---Arbeistliste
 WITH DKHVar AS
-    (SELECT :startdatum AS startdate,:enddatum as enddate FROM dual)
+    --(SELECT :startdatum AS startdate,:enddatum as enddate FROM dual)
+    (SELECT '01-01-2018' AS startdate,'31-12-2018' as enddate FROM dual)
     ,DKH as(
 select  /*+ OPT_PARAM('_OPTIMIZER_USE_FEEDBACK' 'FALSE') */  EXTERNER_PATIENT.PATIENTEN_ID ,--EXTERNER_PATIENT.PAT_ID,
 p.pat_id GTDS_ID,EXTERNER_PATIENT.AENDERUNGSDATUM,EXTERNER_PATIENT.IMPORT_DATUM,
@@ -54,6 +55,8 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
   T.DIAGNOSEDATUM,
   qba.TAG_DER_MESSUNG as Letzte_Bearbeitung_Tumor,
   case when qba.BEMERKUNG is null then qaa.Auspraegung else qaa.Auspraegung ||' - '||qba.BEMERKUNG end Arbeitsliste_Tumor ,
+  qbb.TAG_DER_MESSUNG as Datum_Behandelt_2018,
+  qab.Auspraegung as Behandelt_2018,
   T.KORREKTUR_DATUM,
 
              (select case when max(qb.Fk_Qualitative_Fk) is null then 'kein Merkmal' 
@@ -129,10 +132,20 @@ left outer join (select LISTAGG(ED.Fk_IcdIcd,' | ') WITHIN GROUP (order by null)
 left outer join (select  Fk_Externe_Patienten_ID, Fk_IcdIcd,datum,row_number() over (partition by Fk_Externe_Patienten_ID order by datum desc) rn
         from  EXTERNE_DIAGNOSE extd where extd.import_quelle='UKE'  and (extd.FK_ICDICD like 'C%' or extd.FK_ICDICD like 'D%') and (extd.STATUS not in ('V','B') or extd.STATUS is null)
         order by Fk_Externe_Patienten_ID) ICX on rn=1 and icx.fk_externe_patienten_id  =EXTERNER_PATIENT.Patienten_ID
+
+--Merkmal Behandelt 2018
+ left outer join QUALITATIVER_BEFUND qbb --Behandelt in 2018   
+on T.FK_PATIENTPAT_ID=qbb.FK_VORHANDENE_DFK
+ and T.TUMOR_ID=qbb.FK_VORHANDENE_DLFD
+and qbb.FK_VORHANDENE_DDAT='Diagnose'
+and qbb.FK_QUALITATIVE_FK=83
+left outer join QUALITATIVE_AUSPRAEGUNG qab
+  on qbb.Fk_Qualitative_Fk = qab.Fk_QualitativesID -- Merkmal
+            AND qbb.Fk_Qualitative_ID = qab.ID
   
 where 
-EXTERNER_PATIENT.HAUPT_VERS_NAME='TUMORPATIENT'
-and EXTERNER_PATIENT.Import_Quelle = 'UKE'
+--EXTERNER_PATIENT.HAUPT_VERS_NAME='TUMORPATIENT' and
+ EXTERNER_PATIENT.Import_Quelle = 'UKE'
 AND MONTHS_BETWEEN(SYSDATE, EXTERNER_PATIENT.Geburtsdatum)/12 >= 17.5
 and
 --Filterbedingung Änderungszeitraum
@@ -147,17 +160,22 @@ and
   )
   or exists
     (select 1 from EXTERNE_DIAGNOSE ED where ED.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and ED.IMPORT_QUELLE='UKE' and ED.DATUM between to_date(to_date(DKHVar.startdate)) and to_date(DKHVar.enddate)
-     and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<ED.DATUM) and (ED.STATUS not in ('V','B') or ED.STATUS is null) ) --EIne Externe Diagnose im Zeitraum
+     and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<ED.DATUM) and (ED.STATUS not in ('V','B') or ED.STATUS is null) and ED.DATUM<sysdate
+     and (ed.FK_ICDICD like 'C%' or ed.FK_ICDICD like 'D%')
+     ) --EIne Externe Diagnose im Zeitraum
   or exists
     (select 1 from EXTERNE_PROZEDUR EP where EP.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and EP.IMPORT_QUELLE='UKE' and EP.DATUM between to_date(DKHVar.startdate) and to_date(DKHVar.enddate)
         and (ep.fk_opschluessel like '8-5%' or ep.fk_opschluessel like '5-%')
       and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<EP.DATUM) and (EP.STATUS not in ('V','B') or EP.STATUS is null)) --EIne Externe Prozedur im Zeitraum
   or exists
     (select 1 from ABTEILUNG_PATIENT_BEZIEHUNG AB where AB.FK_EXTERNE_PATIENTEN_ID =EXTERNER_PATIENT.PATIENTEN_ID and AB.IMPORT_QUELLE='UKE'
-      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<AB.BEGINN) and AB.BEGINN between to_date(DKHVar.startdate) and to_date(DKHVar.enddate)) --Einen aktuellen Aufenthalt
+      and (qba.TAG_DER_MESSUNG is null or qba.TAG_DER_MESSUNG<AB.BEGINN) and AB.BEGINN between to_date(DKHVar.startdate) and to_date(DKHVar.enddate)
+      and  AB.BEGINN<=sysdate
+      ) --Einen aktuellen Aufenthalt
 )
 
 --or p.PAT_ID is null
+--and EXTERNER_PATIENT.Patienten_id='978597296'
 )
 ) 
 select /*count(*)*/ d.patienten_id,d.gtds_id,
@@ -170,6 +188,8 @@ d.Name,d.Vorname,d.geburtsdatum
 ,d.diagnosedatum as diagnosedatum_gtds
 ,d.letzte_bearbeitung_tumor
 ,d.arbeitsliste_tumor
+,d.Datum_Behandelt_2018
+,d.Behandelt_2018
 ,d.max_ext_dat
 ,d.sterbemeldung
 ,d.sterbedatum

@@ -15,6 +15,7 @@
   20181217: Externe Metastasen ergänzt via left outer join einer subquery
   20181220: Zweiter Melanomfilter für Patienten, die mind. einen Aufenthalt in der HT Kern oder Haut-Ambulanz hatten (Filter 290)
   20190627: Prostata Onko Filter nur für Onkoambulanz ('8975') und nicht der ganze Onko Bereich ('8975','12973','8982','14972')
+  20191021: Korrektur_Bemerkung hinzugefügt
 
 */
 ---Arbeistliste
@@ -57,6 +58,7 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
   qba.TAG_DER_MESSUNG as Letzte_Bearbeitung_Tumor,
   case when qba.BEMERKUNG is null then qaa.Auspraegung else qaa.Auspraegung ||' - '||qba.BEMERKUNG end Arbeitsliste_Tumor ,
   T.KORREKTUR_DATUM,
+  t.korrektur_bemerkung,
 
              (select case when max(qb.Fk_Qualitative_Fk) is null then 'kein Merkmal' 
     when max(qa.AUSPRAEGUNG) is null then 'N.D.' else max(qa.AUSPRAEGUNG) end
