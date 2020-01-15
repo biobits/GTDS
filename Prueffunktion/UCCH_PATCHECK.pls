@@ -14,6 +14,8 @@
 -- 20170419: SV Nummer prüfung; Hausnummer Regex
 -- 20170615: C90% Patienten Klassifikastionen zugeordnet -> Holger
 -- 20180621: Teilbestrahlung wird auf korrekte EInheiten gemäß ADT V2 geprüft
+-- 20191121: ICD-O Lokalisation Prüfung auf Hauptlokalisation und Seitenangabe; Zielgebiete der Teilbestrahlung: Prüfung auf Codierung und Seitenangabe
+--              Fehler bei Angabe von Gesamtdosis bzw. Grund des Abruchs (Vorgehen) ohne ein Enddatum der Bestrahlung.
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -61,6 +63,9 @@ V_DIAG_DATUM date null; --DIagnosedatum
 V_DIAG_SICH varchar2(10) null;--DIagnosesicherung
 V_DIAG_LEISTUNG varchar2(4) null; --Leistungszustand
 V_DIAG_MELDEANLASS varchar(255) null ;--Meldeanlass
+-- LOkalisation
+V_Lok_Code varchar2(5) null; -- Lokalisatiomsschlüssel ICD-O
+V_Lok_Seite varchar2(1) null; ---Seitenangabe (Pflicht für HKR)
 --KLassifikation
 V_pT varchar2(5)null;
 V_pN varchar2(5)null;
@@ -137,6 +142,16 @@ if V_DIAG_DATUM is null then
   select V_ERGEBNIS||'Diagnosedatum fehlt;'||V_NL into V_ERGEBNIS from DUAL;
 end if;
 
+--LOkalisation auslesen
+select FK_LOKALISATIONLOK,SEITE into  V_Lok_Code ,V_Lok_Seite from LOKALISATION where fk_tumorfk_patient=PATID and FK_TUMORTUMOR_ID=TUMID and HAUPT_NEBEN='H';
+    --Keine Hauptlokalisation Vorhanden
+    if V_Lok_Code is null then
+        select V_ERGEBNIS||'ICD-O Hauptlokalisation fehlt;'||V_NL into V_ERGEBNIS from DUAL;
+    end if;   
+    --Keine Seitenlokalisation vorhanden
+    if V_Lok_Code is not null and V_Lok_Seite is null then
+        select V_ERGEBNIS||'ICD-O Seitenangabe fehlt;'||V_NL into V_ERGEBNIS from DUAL;
+    end if;  
 --nur EIgene Diagnose und gültige Meldeanlässe?
 if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_MELDEANLASS <>'keine_meldung' or NURMELDEANLAESSE=0))  then
   -- SONDEFÄLLE --Bestimmte Parameter setzen für SOnderfälle
@@ -280,6 +295,8 @@ declare
     where FK_TUMORFK_PATIENT =PATID and FK_TUMORTUMOR_ID=TUMID;
   cursor c_teil (cin_PATID NUMBER,cin_LFDNR NUMBER) is select * from TEILBESTRAHLUNG te
     where te.FK_BESTRAHLUNGFK_0=cin_PATID and te.FK_BESTRAHLUNGLFDN=cin_LFDNR;
+   cursor c_ziel (cin_PATID NUMBER,cin_LFDNR NUMBER,cin_TEIL_Nr NUMBER) is select * from ZIELGEBIET zi
+    where zi.FK_STRAHLENTHERFK0=cin_PATID and zi.FK_STRAHLENTHERFK1=cin_LFDNR and zi.FK_STRAHLENTHERLFD=cin_TEIL_Nr;
 begin
   for r_rt in c_bestr loop
   if ((NUREIGENEDOKU =0 or r_rt.DURCHFUEHRENDE_ABT_ID>1) and (NURMELDEANLAESSE=0 or r_rt.MELDEANLASS is null or r_rt.MELDEANLASS<>'keine_meldung')) then
@@ -298,6 +315,19 @@ begin
       end if;
       -- Pruefung Teilbestrahlung
       for r_teil in c_teil(PATID ,r_rt.LFDNR) loop
+      
+          --Prüfung Zielgebiete
+            for r_ziel in c_ziel(PATID ,r_rt.LFDNR,r_teil.LFDNR) loop
+                -- Kein Zielgebiet angegebn
+                if (r_ziel.FK_ZIELGEBIET_SZIE is null) then
+                      select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Zielgebietsschluessel;'||V_NL into V_ERGEBNIS from DUAL;
+                 end if;
+                 -- Keine Seitenangabe bei Zielgebiet angegebn
+                if (r_ziel.FK_ZIELGEBIET_SZIE is not null and r_ziel.SEITE is null) then
+                      select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Seitenangabe bei Zielgebiet;'||V_NL into V_ERGEBNIS from DUAL;
+                 end if;
+            end loop;
+          -- Prüfung Zielgebiete ENDE
           --Teil-Bestrahlung ohne Applikationsart?
              if (r_teil.APPLIKATIONSART is null) then
                   select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne Applikationsart;'||V_NL into V_ERGEBNIS from DUAL;
@@ -310,6 +340,16 @@ begin
           if (r_teil.GY_GBQ is not null and r_teil.GY_GBQ not in ('Gy','GBq')) then
                   select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] ohne korrekte Einheit (Gy,GBq);'||V_NL into V_ERGEBNIS from DUAL;
              end if;
+          
+          -- Gesamtdosis vorhanden obwohl kein Enddatum eingetragen?
+           if (r_Teil.ENDE is null and r_teil.GESAMTDOSIS is not null) then
+                select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] Gesamtdosis trotz fehlendem Enddatum angegeben;'||V_NL into V_ERGEBNIS from DUAL;
+           end if;
+           -- Vorgehen (Grund für Abbruch) vorhanden obwohl kein Enddatum eingetragen?
+           if (r_Teil.ENDE is null and r_teil.VORGEHEN is not null) then
+                select V_ERGEBNIS||'Bestr['||r_rt.LFDNR||']: Teilbestrahlung['||r_teil.LFDNR||'] Vorgehen trotz fehlendem Enddatum angegeben;'||V_NL into V_ERGEBNIS from DUAL;
+           end if;
+        
           --Bei vorhandenem Enddatum Gesamtdosis und Grund Therapieende (Vorgehen) prüfen
             if (r_Teil.ENDE is not null) then
               if(r_teil.GESAMTDOSIS is null) then
