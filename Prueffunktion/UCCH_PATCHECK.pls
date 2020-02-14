@@ -16,6 +16,7 @@
 -- 20180621: Teilbestrahlung wird auf korrekte EInheiten gemäß ADT V2 geprüft
 -- 20191121: ICD-O Lokalisation Prüfung auf Hauptlokalisation und Seitenangabe; Zielgebiete der Teilbestrahlung: Prüfung auf Codierung und Seitenangabe
 --              Fehler bei Angabe von Gesamtdosis bzw. Grund des Abruchs (Vorgehen) ohne ein Enddatum der Bestrahlung.
+-- 20200211: ICD-O Lokalisation wird auf HKR Konformität geprüft; Integration der "Teiloperationen" -> prüfung
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -152,6 +153,10 @@ select FK_LOKALISATIONLOK,SEITE into  V_Lok_Code ,V_Lok_Seite from LOKALISATION 
     if V_Lok_Code is not null and V_Lok_Seite is null then
         select V_ERGEBNIS||'ICD-O Seitenangabe fehlt;'||V_NL into V_ERGEBNIS from DUAL;
     end if;  
+    --Keine korrekt (im HKR Sinn) Seitenlokalisation vorhanden
+    if V_Lok_Code is not null and V_Lok_Seite not in ('R','L','B','M','T') then
+        select V_ERGEBNIS||'ICD-O Seitenangabe nicht HKR-konform;'||V_NL into V_ERGEBNIS from DUAL;
+    end if;  
 --nur EIgene Diagnose und gültige Meldeanlässe?
 if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_MELDEANLASS <>'keine_meldung' or NURMELDEANLAESSE=0))  then
   -- SONDEFÄLLE --Bestimmte Parameter setzen für SOnderfälle
@@ -242,6 +247,17 @@ begin
          if (r_op.R_KLASSIFIKATION_LOKAL is null) then
           select V_ERGEBNIS||'OP['||r_op.OP_NUMMER||']: Lokaler R-Status fehlt;'||V_NL into V_ERGEBNIS from DUAL;
          end if;
+         --Prüfeung Teiloperationen
+         declare cursor c_teiloperation is select * from TEILOPERATION
+            where FK_OPERATIONFK_TU0 =PATID and FK_OPERATIONOP_NUM=r_OP.OP_NUMMER;
+            begin
+                for r_teil in c_teiloperation loop
+                    -- Prüfung ob OPS Version vorhanden
+                    if (r_teil.FK_OPERATIONSSCAUF is null) then
+                      select V_ERGEBNIS||'OP['||r_op.OP_NUMMER||']: Angabe der OPS-Auflage fehlt;'||V_NL into V_ERGEBNIS from DUAL;
+                    end if;
+                end loop;
+            end;
       end if; 
   end if;
   end loop;

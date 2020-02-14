@@ -7,6 +7,9 @@
 -- 140 : Metastasen
 -- 200 : Prostata
 -- 270 : Prostata Onko
+-- Bespielfilter zum Testen
+-- 130 : Mamma
+-- 120 : Lymphome
 --Änderungen:
   20180525: Zeitpunkt der neusten Meldungen parametriert  
   20180801: Zusatzbedingungen für Prostataca -> Filter auf ausschließliche Martiniklinik Aufenthalte, Patienten mit Stammdatenupdate >01.01.2018 und
@@ -16,6 +19,7 @@
   20181220: Zweiter Melanomfilter für Patienten, die mind. einen Aufenthalt in der HT Kern oder Haut-Ambulanz hatten (Filter 290)
   20190627: Prostata Onko Filter nur für Onkoambulanz ('8975') und nicht der ganze Onko Bereich ('8975','12973','8982','14972')
   20191021: Korrektur_Bemerkung hinzugefügt
+  20200204: Dokustand ergänzt
 
 */
 ---Arbeistliste
@@ -100,6 +104,16 @@ case when p.pat_id is not null then 1 else 0 end Im_GTDS,
 
 , case when (EXTERNER_PATIENT.STerbedatum is not null and p.Sterbedatum is null) then 'J' else null end as Sterbemeldung
 ,EXTERNER_PATIENT.STerbedatum 
+,             (select case when max(qb.Fk_Qualitative_Fk) is null then 'kein Merkmal' 
+    when max(qa.AUSPRAEGUNG) is null then 'N.D.' else max(qa.AUSPRAEGUNG) end
+    FROM QUALITATIVER_BEFUND qb 
+    left outer join QUALITATIVE_AUSPRAEGUNG qa
+    on qb.FK_QUALITATIVE_ID=qa.ID and qb.Fk_Qualitative_Fk=qa.FK_QUALITATIVESID
+          WHERE 
+          T.TUMOR_ID=qb.FK_VORHANDENE_DLFD
+          and T.FK_PATIENTPAT_ID=qb.FK_VORHANDENE_DFK
+            AND qb.Fk_Qualitative_Fk = 102          -- Merkmal ist Dokumentationsstand
+            AND qb.Fk_Vorhandene_DDAT = 'Diagnose' ) as Dokustand
 from 
 EXTERNER_PATIENT 
 left outer join 
