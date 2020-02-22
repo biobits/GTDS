@@ -17,6 +17,7 @@
 -- 20191121: ICD-O Lokalisation Prüfung auf Hauptlokalisation und Seitenangabe; Zielgebiete der Teilbestrahlung: Prüfung auf Codierung und Seitenangabe
 --              Fehler bei Angabe von Gesamtdosis bzw. Grund des Abruchs (Vorgehen) ohne ein Enddatum der Bestrahlung.
 -- 20200211: ICD-O Lokalisation wird auf HKR Konformität geprüft; Integration der "Teiloperationen" -> prüfung
+-- 20200219: C75 zu den nicht TNM Klassifikationen hinzugefügt; Prüfung auf vorhandene Haupthistologie
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -67,6 +68,8 @@ V_DIAG_MELDEANLASS varchar(255) null ;--Meldeanlass
 -- LOkalisation
 V_Lok_Code varchar2(5) null; -- Lokalisatiomsschlüssel ICD-O
 V_Lok_Seite varchar2(1) null; ---Seitenangabe (Pflicht für HKR)
+-- Histologie
+V_Haupthisto varchar2(1) null; -- Haupthistologie vorhanden
 --KLassifikation
 V_pT varchar2(5)null;
 V_pN varchar2(5)null;
@@ -154,9 +157,27 @@ select FK_LOKALISATIONLOK,SEITE into  V_Lok_Code ,V_Lok_Seite from LOKALISATION 
         select V_ERGEBNIS||'ICD-O Seitenangabe fehlt;'||V_NL into V_ERGEBNIS from DUAL;
     end if;  
     --Keine korrekt (im HKR Sinn) Seitenlokalisation vorhanden
-    if V_Lok_Code is not null and V_Lok_Seite not in ('R','L','B','M','T') then
+    if V_Lok_Code is not null and V_Lok_Seite not in ('R','L','B','M','T','X') then
         select V_ERGEBNIS||'ICD-O Seitenangabe nicht HKR-konform;'||V_NL into V_ERGEBNIS from DUAL;
     end if;  
+
+--Prüfung Histologie der Diagnose
+ declare cursor c_histologie is select * from HISTOLOGIE
+    where FK_TUMORFK_PATIENT =PATID and FK_TUMORTUMOR_ID=TUMID;-- and Herkunft='D'; --> nicht nur in Diagnose prüfen
+    begin
+   
+        for r_histo in c_histologie loop
+            -- Prüfung ob ha vorhanden
+            if (r_histo.HAUPT_NEBEN='H') then
+                    select r_histo.HAUPT_NEBEN into V_Haupthisto from Dual;
+            end if;
+        end loop;
+    end;
+if V_Haupthisto is null then
+    select V_ERGEBNIS||'Keine Haupthistologie angegeben;' into V_ERGEBNIS from DUAL;
+end if;
+--Histologie ende
+    
 --nur EIgene Diagnose und gültige Meldeanlässe?
 if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_MELDEANLASS <>'keine_meldung' or NURMELDEANLAESSE=0))  then
   -- SONDEFÄLLE --Bestimmte Parameter setzen für SOnderfälle
@@ -169,7 +190,7 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
   
   --KLASSIFIKATION
   --SOnstige Klassifikation (hämatologisch, Hirntumor)
-  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86%','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0')) where V_ICD like column_value;
+  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86%','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%''C75%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0')) where V_ICD like column_value;
   --FIGO Benötigt?
   select count(column_value) into v_COUNTER2 from table(sys.dbms_debug_vc2coll('C53%','C56%','C57%')) where V_ICD like column_value;
   -- Sonderfall DIagnose und OP am gleichen Tag und pTNM dann bei OP
