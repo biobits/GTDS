@@ -18,6 +18,7 @@
 --              Fehler bei Angabe von Gesamtdosis bzw. Grund des Abruchs (Vorgehen) ohne ein Enddatum der Bestrahlung.
 -- 20200211: ICD-O Lokalisation wird auf HKR Konformität geprüft; Integration der "Teiloperationen" -> prüfung
 -- 20200219: C75 zu den nicht TNM Klassifikationen hinzugefügt; Prüfung auf vorhandene Haupthistologie
+-- 20200604: Auswertungsrelevanz des TNM Status wird geprüft
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -77,6 +78,8 @@ V_pM varchar2(5)null;
 V_T varchar2(20)null;
 V_N varchar2(20)null;
 V_M varchar2(20)null;
+V_C_TNM_Rel number null; -- Auswertungsrelevanz des TNM Status
+V_C_TNM number null; --Counter für anzahl TNM EInträge
 V_Sonst_Stadium varchar2(10) null;
 V_AnnArbor varchar2(10) null;
 V_C_SonstStad number null; --Counter f. Sonstige Stadien
@@ -217,6 +220,11 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
           select max(t1.T),max(t1.N),max(t1.Met) into V_T,V_N,V_M from TNM t1 where t1.FK_TUMORFK_PATIENT=PATID and t1.FK_TUMORTUMOR_ID=TUMID and t1.Herkunft='D';
           if (V_T is null or V_N is null or V_M is null) then 
             select V_ERGEBNIS||'TNM-Status bei Diagnose unvollständig;'||V_NL into V_ERGEBNIS from DUAL;
+          end if;
+          --Auswertungsrelevanz prüfen (Alle TNM)
+          select count(*),sum(case when t2.auswertungs_relevant='J' then 1 else 0 end) into V_C_TNM,V_C_TNM_Rel from TNM t2 where t2.FK_TUMORFK_PATIENT=PATID and t2.FK_TUMORTUMOR_ID=TUMID;
+          if (V_C_TNM>1 and V_C_TNM_Rel<>1) then 
+            select V_ERGEBNIS||'Mehrere TNM-Status ohne eindeutige Kennzeichnung der Auswertungsrelevanz;'||V_NL into V_ERGEBNIS from DUAL;
           end if;
        end if;
        
