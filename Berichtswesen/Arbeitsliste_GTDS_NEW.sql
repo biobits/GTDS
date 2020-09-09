@@ -7,6 +7,8 @@
 -- 140 : Metastasen
 -- 200 : Prostata
 -- 270 : Prostata Onko
+-- 290 : Melanome HT
+-- 350 : Auge HT
 -- Bespielfilter zum Testen
 -- 130 : Mamma
 -- 120 : Lymphome
@@ -20,6 +22,7 @@
   20190627: Prostata Onko Filter nur für Onkoambulanz ('8975') und nicht der ganze Onko Bereich ('8975','12973','8982','14972')
   20191021: Korrektur_Bemerkung hinzugefügt
   20200204: Dokustand ergänzt
+  20200825: Auge Hautzentrum ergänzt
 
 */
 ---Arbeistliste
@@ -337,5 +340,19 @@ and (
  
  )
 )
+--Filterbedingung Augentumore nur in Abteilungen der Hautklinik /Ambulanz
+and (
+ :FILTERCODE <>350
+ or(
+ EXISTS(
+    SELECT 1
+    FROM ABTEILUNG_PATIENT_BEZIEHUNG ABP1
+    WHERE ABP1.Fk_Externe_Patienten_ID = EXTERNER_PATIENT.Patienten_ID
+    AND ABP1.Fk_AbteilungAbteil IN ('5971','267800 ','26780')
 
+    )
+
+ 
+ )
+)
 ;
