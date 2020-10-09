@@ -19,6 +19,9 @@
 -- 20200211: ICD-O Lokalisation wird auf HKR Konformität geprüft; Integration der "Teiloperationen" -> prüfung
 -- 20200219: C75 zu den nicht TNM Klassifikationen hinzugefügt; Prüfung auf vorhandene Haupthistologie
 -- 20200604: Auswertungsrelevanz des TNM Status wird geprüft
+-- 20200915: max() bei ICD-O Lokalistationscheck ergänzt
+-- 20200930: Liste paariger Organe und entsprechende Seitenlokalisationsprüfung ergänzt
+-- 20201005: Liste der paarigen Organe auf ICD-O übersetzt
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -56,6 +59,7 @@ V_COUNTER3 number null;
 V_COUNTER4 number null;
 V_COUNTER5 number null;
 V_WeichteilCounter number null; -- Sonderfall Weichteil tumor
+V_PaarigLokCounter number null; --zur Püfung auf paariges Organ
 V_DiagOhneKlass number null; --COunter für jene Diagnosen, bei denen keine Klassifikation erhoben werden kann.
 V_ERGEBNIS varchar2(4000) null;
 
@@ -93,6 +97,7 @@ V_THER_C_SUB number null; --Counter für Substanzen die mit einer Int. Therapie a
 --Bestrahlung
 V_RT_C_ZIEL number null; --Counter für Zielgebiete die mit einer Bestrahlung assoziiert sind 
 V_RT_C_TEIL number null; --Counter für Teilbestrahlungen die mit einer Bestrahlung assoziiert sind 
+
 
 BEGIN
 select '' into  V_ERGEBNIS from DUAL;
@@ -150,7 +155,7 @@ if V_DIAG_DATUM is null then
 end if;
 
 --LOkalisation auslesen
-select FK_LOKALISATIONLOK,SEITE into  V_Lok_Code ,V_Lok_Seite from LOKALISATION where fk_tumorfk_patient=PATID and FK_TUMORTUMOR_ID=TUMID and HAUPT_NEBEN='H';
+select max(FK_LOKALISATIONLOK),max(SEITE) into  V_Lok_Code ,V_Lok_Seite from LOKALISATION where fk_tumorfk_patient=PATID and FK_TUMORTUMOR_ID=TUMID and HAUPT_NEBEN='H';
     --Keine Hauptlokalisation Vorhanden
     if V_Lok_Code is null then
         select V_ERGEBNIS||'ICD-O Hauptlokalisation fehlt;'||V_NL into V_ERGEBNIS from DUAL;
@@ -162,6 +167,16 @@ select FK_LOKALISATIONLOK,SEITE into  V_Lok_Code ,V_Lok_Seite from LOKALISATION 
     --Keine korrekt (im HKR Sinn) Seitenlokalisation vorhanden
     if V_Lok_Code is not null and V_Lok_Seite not in ('R','L','B','M','T','X') then
         select V_ERGEBNIS||'ICD-O Seitenangabe nicht HKR-konform;'||V_NL into V_ERGEBNIS from DUAL;
+    end if;  
+    -- keine Korrekte Seitenlokalisation bei paarigen Organen
+    /* Abfrage von ICD10 Codes-> wird auf IOCD-O geändert
+    select count(column_value) into V_PaarigLokCounter from table(sys.dbms_debug_vc2coll('C07%','D00.0%','C09%','C30.0%','D02.3%','C34.0%','C34.1%','C34.3%','C34.8%','C34.9%','D02.2%','C38.4%','D09.7%',
+    'C40.0%','C40.1%','C40.2%','C40.3%','C41.3%','C41.4%','C43.1%','D03.1%','C43.2%','D03.2%','C43.6%','D03.6%','C43.7%','D03.7%','C44.1%','C44.2%','C44.6%',
+    'C44.7%','C45.0%','C50%','D05%','C56%','D07.3%','C57.0%','C62%','D07.6%','C63.0%','C64%', 'D09.1%','C65%','C66%','C69%','D09.2%','C74%','D09.3%')) where V_ICD like column_value;*/
+   select count(column_value) into V_PaarigLokCounter from table(sys.dbms_debug_vc2coll('07%','09%','300%','340%','341%','343%','348%','349%','384%','400%','401%','402%','403%','413%','414%',
+   '431%','432%','436%','437%','441%','442%','446%','447%','450%','49%','50%','56%','570%','62%','630%','64%','65%','66%','69%','74%')) where v_lok_code like column_value;
+    if v_paariglokcounter =0 and V_Lok_Seite <> 'T' then
+         select V_ERGEBNIS||'Nicht HKR-konforme ICD-O Seitenangabe für nicht-paariges Organ (ungleich "Trifft nicht zu");'||V_NL into V_ERGEBNIS from DUAL;
     end if;  
 
 --Prüfung Histologie der Diagnose
