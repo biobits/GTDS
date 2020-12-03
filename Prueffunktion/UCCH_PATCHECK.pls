@@ -23,6 +23,7 @@
 -- 20200930: Liste paariger Organe und entsprechende Seitenlokalisationsprüfung ergänzt
 -- 20201005: Liste der paarigen Organe auf ICD-O übersetzt
 -- 20201020: Komplette Lokalistation 44% in parige Liste übernommen; C43 nicht auf cTNM sondern auf sonstige Klassifikation prüfen
+-- 20201109: Aderhautmelanome nicht auf Klassifikation prüfen (C69.0); Prüfung Seitenlok. für '341%' (Lungenmittellappen) auf paarig geändert
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -174,7 +175,7 @@ select max(FK_LOKALISATIONLOK),max(SEITE) into  V_Lok_Code ,V_Lok_Seite from LOK
     select count(column_value) into V_PaarigLokCounter from table(sys.dbms_debug_vc2coll('C07%','D00.0%','C09%','C30.0%','D02.3%','C34.0%','C34.1%','C34.3%','C34.8%','C34.9%','D02.2%','C38.4%','D09.7%',
     'C40.0%','C40.1%','C40.2%','C40.3%','C41.3%','C41.4%','C43.1%','D03.1%','C43.2%','D03.2%','C43.6%','D03.6%','C43.7%','D03.7%','C44.1%','C44.2%','C44.6%',
     'C44.7%','C45.0%','C50%','D05%','C56%','D07.3%','C57.0%','C62%','D07.6%','C63.0%','C64%', 'D09.1%','C65%','C66%','C69%','D09.2%','C74%','D09.3%')) where V_ICD like column_value;*/
-   select count(column_value) into V_PaarigLokCounter from table(sys.dbms_debug_vc2coll('07%','09%','300%','340%','341%','343%','348%','349%','384%','400%','401%','402%','403%','413%','414%',
+   select count(column_value) into V_PaarigLokCounter from table(sys.dbms_debug_vc2coll('07%','09%','300%','340%','341%','342%','343%','348%','349%','384%','400%','401%','402%','403%','413%','414%',
    '431%','432%','436%','437%','44%','450%','49%','50%','56%','570%','62%','630%','64%','65%','66%','69%','74%')) where v_lok_code like column_value;
     if v_paariglokcounter =0 and V_Lok_Seite <> 'T' then
          select V_ERGEBNIS||'Nicht HKR-konforme ICD-O Seitenangabe für nicht-paariges Organ (ungleich "Trifft nicht zu");'||V_NL into V_ERGEBNIS from DUAL;
@@ -204,12 +205,14 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
   -- DIagnose = Weichteiltumor?
   select count(column_value) into V_WeichteilCounter from table(sys.dbms_debug_vc2coll('C38.1','C38.2','C38.3','C47%','C48.0','C49%')) where V_ICD like column_value;
   -- Diagnosen ohne Klassifikationen
-  select count(column_value) into V_DiagOhneKlass from table(sys.dbms_debug_vc2coll('D35%','C44%','C91%','C96%')) where V_ICD like column_value;
+  select count(column_value) into V_DiagOhneKlass
+    from table(sys.dbms_debug_vc2coll('D35%','C44%','C91%','C96%','C69.0','D32%')) where V_ICD like column_value;
   
   
   --KLASSIFIKATION
   --SOnstige Klassifikation (hämatologisch, Hirntumor)
-  select count(column_value) into v_COUNTER from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86%','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%''C75%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0','C43%')) where V_ICD like column_value;
+  select count(column_value) into v_COUNTER
+    from table(sys.dbms_debug_vc2coll('C81%','C82%','C83%','C84%','C85%','C86%','C88%','C90%','C92%','C93%','C94%','C95%','C69%','C70%','C71%','C72%''C75%','D32%','D33%','D35%','D36%','D42%','D43%','D46%','C22.0','C43%')) where V_ICD like column_value;
   --FIGO Benötigt?
   select count(column_value) into v_COUNTER2 from table(sys.dbms_debug_vc2coll('C53%','C56%','C57%')) where V_ICD like column_value;
   -- Sonderfall DIagnose und OP am gleichen Tag und pTNM dann bei OP
