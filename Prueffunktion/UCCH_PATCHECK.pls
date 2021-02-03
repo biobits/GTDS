@@ -24,6 +24,7 @@
 -- 20201005: Liste der paarigen Organe auf ICD-O übersetzt
 -- 20201020: Komplette Lokalistation 44% in parige Liste übernommen; C43 nicht auf cTNM sondern auf sonstige Klassifikation prüfen
 -- 20201109: Aderhautmelanome nicht auf Klassifikation prüfen (C69.0); Prüfung Seitenlok. für '341%' (Lungenmittellappen) auf paarig geändert
+-- 20210203: Kaposi-Sarkom (C46*) nicht auf TNM prüfen
 
 -- Parameter:
 -- PATID -> Die GTDS-ID des Patienten
@@ -206,7 +207,7 @@ if ((NUREIGENEDOKU =0 or V_DIAG_ABT>1)and (V_DIAG_MELDEANLASS is null or V_DIAG_
   select count(column_value) into V_WeichteilCounter from table(sys.dbms_debug_vc2coll('C38.1','C38.2','C38.3','C47%','C48.0','C49%')) where V_ICD like column_value;
   -- Diagnosen ohne Klassifikationen
   select count(column_value) into V_DiagOhneKlass
-    from table(sys.dbms_debug_vc2coll('D35%','C44%','C91%','C96%','C69.0','D32%')) where V_ICD like column_value;
+    from table(sys.dbms_debug_vc2coll('D35%','C46%','C44%','C91%','C96%','C69.0','D32%')) where V_ICD like column_value;
   
   
   --KLASSIFIKATION
